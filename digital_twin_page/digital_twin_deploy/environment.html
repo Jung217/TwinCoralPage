@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<title>Environmental Monitoring (Simulated) — Coral Reef Digital Twin</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+        colors: {
+          ink:    { 950:'#0b1220', 900:'#0f172a', 800:'#1e293b', 700:'#334155', 600:'#475569' },
+          fog:    { 100:'#f1f5f9', 200:'#e2e8f0', 300:'#cbd5e1', 400:'#94a3b8', 500:'#64748b' },
+          coral:  { 300:'#fdba74', 400:'#fb923c', 500:'#f97316', 600:'#ea580c' },
+          warn:   { 400:'#fbbf24' },
+          danger: { 400:'#f87171' },
+          ok:     { 400:'#34d399' },
+        },
+        boxShadow: { card: '0 1px 3px rgba(0,0,0,.3), 0 8px 24px -8px rgba(0,0,0,.4)' }
+      }
+    }
+  };
+</script>
+<style>
+  html, body { font-family: 'Inter', system-ui, sans-serif; }
+  body { background: radial-gradient(1200px 600px at 20% -10%, #112036 0%, #0b1220 55%, #070d1a 100%); color:#e2e8f0; }
+  .reading-value { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+  .demo-tag {
+    font-size: 9px; letter-spacing: .08em; text-transform: uppercase;
+    color: #64748b; background:#0b1220; border:1px solid #1e293b;
+    padding: 2px 6px; border-radius: 4px;
+  }
+  .badge-demo {
+    background: rgba(249, 115, 22, .15); color:#fdba74; border:1px solid rgba(249, 115, 22, .35);
+    padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight:600; letter-spacing:.04em;
+  }
+  .seg-btn { transition: all .15s ease; }
+  .seg-btn.active { background:#1e293b; color:#e2e8f0; box-shadow: inset 0 0 0 1px #334155; }
+  .seg-btn:not(.active):hover { color:#cbd5e1; }
+  .pulse-dot { animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
+  .trend-up   { color:#f87171; }
+  .trend-down { color:#34d399; }
+  .trend-flat { color:#94a3b8; }
+  .ico { width:14px; height:14px; display:inline-block; vertical-align:-2px; }
+  .modal-backdrop { background: rgba(0,0,0,.6); backdrop-filter: blur(2px); }
+  /* chart canvas need fixed height in flex grid */
+  .chart-wrap { position: relative; height: 200px; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- Top bar -->
+<header class="px-6 py-4 border-b border-ink-800/80 flex items-center gap-4">
+  <div class="flex items-center gap-3">
+    <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-coral-500 to-coral-600 grid place-items-center text-white font-bold">CR</div>
+    <div>
+      <div class="text-[15px] font-semibold tracking-tight">Coral Reef Digital Twin Platform <span class="badge-demo align-middle ml-1">Demo Data</span></div>
+      <div class="text-[11px] text-fog-500">Concept preview · Environmental dashboard (standalone)</div>
+    </div>
+  </div>
+  <div class="ml-auto flex items-center gap-3 text-[12px] text-fog-400">
+    <span class="pulse-dot inline-block w-2 h-2 rounded-full bg-ok-400"></span>
+    <span>Last update: <span id="last-update" class="text-fog-200 tabular-nums">—</span></span>
+  </div>
+</header>
+
+<!-- Section header -->
+<section class="px-6 pt-5 pb-3 flex items-end gap-3">
+  <h1 class="text-[18px] font-semibold tracking-tight">Environmental Monitoring <span class="text-fog-500 text-[13px] font-normal">(Simulated)</span></h1>
+  <div class="ml-auto flex items-center gap-2">
+    <!-- Time range -->
+    <div class="flex bg-ink-900/80 border border-ink-800 rounded-lg p-0.5 text-[12px] text-fog-400">
+      <button data-range="24h" class="seg-btn px-3 py-1 rounded-md">24h</button>
+      <button data-range="7d"  class="seg-btn px-3 py-1 rounded-md">7d</button>
+      <button data-range="30d" class="seg-btn px-3 py-1 rounded-md active">30d</button>
+    </div>
+    <!-- Alert settings (placeholder) -->
+    <button id="alert-settings" title="Alert settings"
+      class="w-8 h-8 grid place-items-center rounded-lg bg-ink-900/80 border border-ink-800 text-fog-400 hover:text-fog-200 hover:border-ink-700">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+    </button>
+  </div>
+</section>
+
+<!-- Readings cards -->
+<section class="px-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+  <!-- SST -->
+  <div class="reading-card bg-ink-800/70 rounded-xl border border-ink-800 shadow-card p-4 relative">
+    <div class="flex items-center gap-2 text-fog-400 text-[12px]">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0Z"/></svg>
+      <span>Water Temperature</span>
+      <span class="demo-tag ml-auto">demo</span>
+    </div>
+    <div class="mt-2 flex items-baseline gap-1.5">
+      <span id="r-sst" class="reading-value text-3xl font-semibold tracking-tight">—</span>
+      <span class="text-fog-400 text-[13px]">°C</span>
+      <span id="d-sst" class="trend-flat text-[12px] ml-auto tabular-nums">—</span>
+    </div>
+    <div class="text-[11px] text-fog-500 mt-1">Bleaching threshold: <span class="text-warn-400">29.0 °C</span></div>
+  </div>
+  <!-- pH -->
+  <div class="reading-card bg-ink-800/70 rounded-xl border border-ink-800 shadow-card p-4 relative">
+    <div class="flex items-center gap-2 text-fog-400 text-[12px]">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M5 9h14M5 15h14"/></svg>
+      <span>pH</span>
+      <span class="demo-tag ml-auto">demo</span>
+    </div>
+    <div class="mt-2 flex items-baseline gap-1.5">
+      <span id="r-ph" class="reading-value text-3xl font-semibold tracking-tight">—</span>
+      <span id="d-ph" class="trend-flat text-[12px] ml-auto tabular-nums">—</span>
+    </div>
+    <div class="text-[11px] text-fog-500 mt-1">Healthy range: 7.9 – 8.3</div>
+  </div>
+  <!-- Salinity -->
+  <div class="reading-card bg-ink-800/70 rounded-xl border border-ink-800 shadow-card p-4 relative">
+    <div class="flex items-center gap-2 text-fog-400 text-[12px]">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12s3-6 9-6 9 6 9 6-3 6-9 6-9-6-9-6Z"/><circle cx="12" cy="12" r="2"/></svg>
+      <span>Salinity</span>
+      <span class="demo-tag ml-auto">demo</span>
+    </div>
+    <div class="mt-2 flex items-baseline gap-1.5">
+      <span id="r-sal" class="reading-value text-3xl font-semibold tracking-tight">—</span>
+      <span class="text-fog-400 text-[13px]">‰</span>
+      <span id="d-sal" class="trend-flat text-[12px] ml-auto tabular-nums">—</span>
+    </div>
+    <div class="text-[11px] text-fog-500 mt-1">Reef-normal: 34 – 36 ‰</div>
+  </div>
+  <!-- DO -->
+  <div class="reading-card bg-ink-800/70 rounded-xl border border-ink-800 shadow-card p-4 relative">
+    <div class="flex items-center gap-2 text-fog-400 text-[12px]">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2.5C12 2.5 5 10 5 14.5a7 7 0 0 0 14 0C19 10 12 2.5 12 2.5Z"/></svg>
+      <span>Dissolved Oxygen</span>
+      <span class="demo-tag ml-auto">demo</span>
+    </div>
+    <div class="mt-2 flex items-baseline gap-1.5">
+      <span id="r-do" class="reading-value text-3xl font-semibold tracking-tight">—</span>
+      <span class="text-fog-400 text-[13px]">mg/L</span>
+      <span id="d-do" class="trend-flat text-[12px] ml-auto tabular-nums">—</span>
+    </div>
+    <div class="text-[11px] text-fog-500 mt-1">Low alert: &lt; 5.0 mg/L</div>
+  </div>
+</section>
+
+<!-- Trend charts -->
+<section class="px-6 mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
+  <div class="bg-ink-800/70 rounded-xl border border-ink-800 shadow-card p-4">
+    <div class="flex items-center justify-between text-[12px] text-fog-400 mb-2">
+      <span>Water Temperature trend</span>
+      <span class="text-fog-500" id="range-label-sst">last 30 days</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-sst"></canvas></div>
+  </div>
+  <div class="bg-ink-800/70 rounded-xl border border-ink-800 shadow-card p-4">
+    <div class="flex items-center justify-between text-[12px] text-fog-400 mb-2">
+      <span>pH trend</span>
+      <span class="text-fog-500" id="range-label-ph">last 30 days</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-ph"></canvas></div>
+  </div>
+  <div class="bg-ink-800/70 rounded-xl border border-ink-800 shadow-card p-4">
+    <div class="flex items-center justify-between text-[12px] text-fog-400 mb-2">
+      <span>Salinity trend</span>
+      <span class="text-fog-500" id="range-label-sal">last 30 days</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-sal"></canvas></div>
+  </div>
+  <div class="bg-ink-800/70 rounded-xl border border-ink-800 shadow-card p-4">
+    <div class="flex items-center justify-between text-[12px] text-fog-400 mb-2">
+      <span>Dissolved Oxygen trend</span>
+      <span class="text-fog-500" id="range-label-do">last 30 days</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-do"></canvas></div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="px-6 py-5 mt-6 border-t border-ink-800/80 text-[11px] text-fog-500 leading-relaxed">
+  <div class="flex items-start gap-2">
+    <svg class="ico mt-0.5 text-warn-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <span>Environmental sensor data shown is <b>simulated</b> for demonstration. 3D coral model and colony classifications are derived from real field survey data (T0: 2026-05). Sensor integration is planned.</span>
+  </div>
+</footer>
+
+<!-- Alert settings modal -->
+<div id="modal" class="hidden fixed inset-0 modal-backdrop z-50 grid place-items-center p-4">
+  <div class="bg-ink-800 border border-ink-700 rounded-xl shadow-card max-w-sm w-full p-5">
+    <div class="flex items-center gap-2 mb-2">
+      <svg class="ico text-coral-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <div class="text-[14px] font-semibold">Custom alerts</div>
+      <button id="modal-close" class="ml-auto text-fog-500 hover:text-fog-200 text-lg leading-none">×</button>
+    </div>
+    <div class="text-[13px] text-fog-300">Feature coming soon: set custom alert thresholds for environmental indicators (e.g., SST &gt; 29°C, pH &lt; 7.9).</div>
+    <button id="modal-ok" class="mt-4 w-full py-2 rounded-md bg-coral-500 hover:bg-coral-600 text-white text-[13px] font-medium">Got it</button>
+  </div>
+</div>
+
+<script>
+// =========================================
+//  Data loading + state
+// =========================================
+const STATE = {
+  data: null,                  // parsed environment_data.json
+  range: '30d',                // '24h' | '7d' | '30d'
+  charts: {},                  // chart instances
+  current: { sst:0, ph:0, sal:0, do:0, t:null },
+  prev:    { sst:0, ph:0, sal:0, do:0 },
+};
+
+const FMT = {
+  sst: v => v.toFixed(2),
+  ph:  v => v.toFixed(2),
+  sal: v => v.toFixed(2),
+  do:  v => v.toFixed(2),
+};
+const UNITS = { sst: '°C', ph: '', sal: '‰', do: 'mg/L' };
+
+// =========================================
+//  Time-series slicing
+// =========================================
+function getSeries(range) {
+  const d = STATE.data;
+  if (range === '24h') return d.history_24h;
+  if (range === '7d')  return d.history_30d.slice(-24*7 - 1); // 169 點
+  return d.history_30d;
+}
+
+// =========================================
+//  Chart factory
+// =========================================
+function pointBgFor(key, val) {
+  // Highlight warning points (SST >= 28.5°C) so the threshold story is visible
+  if (key === 'sst' && val >= 28.5) return '#f87171';
+  return 'transparent';
+}
+function pointRadiusFor(key, val) {
+  if (key === 'sst' && val >= 28.5) return 3;
+  return 0;
+}
+
+function buildChart(canvasId, key, color, axis) {
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  const isSst = key === 'sst';
+  return new Chart(ctx, {
+    type: 'line',
+    data: { datasets: [{
+      label: key.toUpperCase(),
+      data: [],
+      borderColor: color,
+      borderWidth: 1.4,
+      tension: 0.25,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      pointBackgroundColor: ctx2 => {
+        const i = ctx2.dataIndex; const p = ctx2.dataset.data[i];
+        return p ? pointBgFor(key, p.y) : 'transparent';
+      },
+      // Static (non-hover) radius — make warning points visible without hovering
+      pointRadiusCallback: undefined,
+      fill: { target: 'origin', above: hexToRgba(color, 0.06) },
+    }]},
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#0b1220', borderColor: '#1e293b', borderWidth: 1,
+          titleColor: '#e2e8f0', bodyColor: '#cbd5e1', padding: 8,
+          displayColors: false,
+          callbacks: {
+            title: items => new Date(items[0].parsed.x).toLocaleString(),
+            label: ctx2 => ` ${FMT[key](ctx2.parsed.y)} ${UNITS[key]}`.trimEnd(),
+          }
+        },
+        // Bleaching warning line (annotation) — done via custom plugin below for SST only
+      },
+      scales: {
+        x: { type: 'time',
+             time: { displayFormats: { hour: 'MM/dd HH:mm', day: 'MM/dd', minute: 'HH:mm' } },
+             ticks: { color: '#64748b', maxRotation: 0, autoSkipPadding: 18, font: { size: 10 } },
+             grid:  { color: 'rgba(30,41,59,.6)', drawBorder: false } },
+        y: { ticks: { color: '#64748b', font: { size: 10 } },
+             grid: { color: 'rgba(30,41,59,.6)', drawBorder: false },
+             suggestedMin: axis.min, suggestedMax: axis.max },
+      },
+    },
+    plugins: isSst ? [bleachLinePlugin] : [],
+  });
+}
+
+// Custom plugin: dashed red line at 29°C with label
+const bleachLinePlugin = {
+  id: 'bleachLine',
+  afterDatasetsDraw(chart) {
+    const yScale = chart.scales.y; const xScale = chart.scales.x;
+    const y = yScale.getPixelForValue(29.0);
+    if (!isFinite(y)) return;
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.strokeStyle = '#f87171'; ctx.lineWidth = 1; ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.moveTo(xScale.left, y); ctx.lineTo(xScale.right, y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#fca5a5'; ctx.font = '10px Inter, sans-serif';
+    ctx.fillText('Bleaching warning · 29 °C', xScale.left + 6, y - 4);
+    ctx.restore();
+  }
+};
+
+function hexToRgba(hex, a) {
+  const h = hex.replace('#',''); const n = parseInt(h, 16);
+  const r = (n>>16)&255, g=(n>>8)&255, b=n&255;
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+// =========================================
+//  Render
+// =========================================
+function setReading(key, val) {
+  const prev = STATE.prev[key];
+  STATE.prev[key] = STATE.current[key];
+  STATE.current[key] = val;
+  document.getElementById('r-'+key).textContent = FMT[key](val);
+  const d = document.getElementById('d-'+key);
+  const delta = val - prev;
+  if (Math.abs(delta) < 0.005) { d.className='trend-flat text-[12px] ml-auto tabular-nums'; d.textContent='→ ±0.00'; }
+  else if (delta > 0) { d.className='trend-up text-[12px] ml-auto tabular-nums'; d.textContent='▲ +'+FMT[key](Math.abs(delta)); }
+  else                { d.className='trend-down text-[12px] ml-auto tabular-nums'; d.textContent='▼ -'+FMT[key](Math.abs(delta)); }
+}
+
+function refreshCharts() {
+  const s = getSeries(STATE.range);
+  const make = key => s.map(p => ({ x: new Date(p.t).getTime(), y: p[key] }));
+  STATE.charts.sst.data.datasets[0].data = make('sst');
+  STATE.charts.ph .data.datasets[0].data = make('ph');
+  STATE.charts.sal.data.datasets[0].data = make('sal');
+  STATE.charts.do .data.datasets[0].data = make('do');
+  // For sst, refresh point radii via callback (Chart.js doesn't accept fn for radius directly, do per-point)
+  const sstData = STATE.charts.sst.data.datasets[0].data;
+  STATE.charts.sst.data.datasets[0].pointRadius = sstData.map(p => p.y >= 28.5 ? 3 : 0);
+  Object.values(STATE.charts).forEach(c => c.update('none'));
+  const label = STATE.range === '24h' ? 'last 24 hours' : STATE.range === '7d' ? 'last 7 days' : 'last 30 days';
+  ['sst','ph','sal','do'].forEach(k => document.getElementById('range-label-'+k).textContent = label);
+}
+
+function setRange(r) {
+  STATE.range = r;
+  document.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('active', b.dataset.range === r));
+  refreshCharts();
+}
+
+// =========================================
+//  Live update simulation: every 30s ±0.1
+// =========================================
+function jitter(amp) { return (Math.random()*2 - 1) * amp; }
+
+function tick() {
+  const c = STATE.current;
+  // Walk ±0.1 within plausible bounds (don't drift away)
+  const next = {
+    sst: clamp(c.sst + jitter(0.1), 26, 30),
+    ph:  clamp(c.ph  + jitter(0.02), 7.9, 8.3),
+    sal: clamp(c.sal + jitter(0.05), 34, 36),
+    do:  clamp(c.do  + jitter(0.1), 5, 8),
+  };
+  setReading('sst', next.sst);
+  setReading('ph',  next.ph);
+  setReading('sal', next.sal);
+  setReading('do',  next.do);
+
+  const t = new Date();
+  STATE.current.t = t.toISOString();
+  document.getElementById('last-update').textContent = t.toLocaleTimeString();
+
+  // Push to charts' tail (only on 24h view — most natural place to see fresh point appear)
+  if (STATE.range === '24h') {
+    ['sst','ph','sal','do'].forEach(k => {
+      const ds = STATE.charts[k].data.datasets[0];
+      ds.data.push({ x: t.getTime(), y: next[k] });
+      if (ds.data.length > 200) ds.data.shift();
+      if (k === 'sst') STATE.charts.sst.data.datasets[0].pointRadius = ds.data.map(p => p.y >= 28.5 ? 3 : 0);
+    });
+    Object.values(STATE.charts).forEach(c => c.update('none'));
+  }
+}
+function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+// =========================================
+//  Boot
+// =========================================
+async function main() {
+  const r = await fetch('environment_data.json');
+  STATE.data = await r.json();
+
+  const c = STATE.data.current;
+  STATE.current = { sst: c.sst, ph: c.ph, sal: c.sal, do: c.do, t: c.t };
+  STATE.prev    = { ...STATE.current };
+  setReading('sst', c.sst); setReading('ph', c.ph); setReading('sal', c.sal); setReading('do', c.do);
+  document.getElementById('last-update').textContent = new Date(c.t).toLocaleTimeString();
+
+  STATE.charts.sst = buildChart('chart-sst', 'sst', '#f87171', { min: 25, max: 30 });
+  STATE.charts.ph  = buildChart('chart-ph',  'ph',  '#60a5fa', { min: 7.9, max: 8.3 });
+  STATE.charts.sal = buildChart('chart-sal', 'sal', '#34d399', { min: 33.5, max: 36 });
+  STATE.charts.do  = buildChart('chart-do',  'do',  '#fbbf24', { min: 5, max: 8 });
+  refreshCharts();
+
+  document.querySelectorAll('.seg-btn').forEach(b => b.addEventListener('click', () => setRange(b.dataset.range)));
+
+  // Modal
+  const modal = document.getElementById('modal');
+  document.getElementById('alert-settings').addEventListener('click', () => modal.classList.remove('hidden'));
+  document.getElementById('modal-close').addEventListener('click',   () => modal.classList.add('hidden'));
+  document.getElementById('modal-ok').addEventListener('click',      () => modal.classList.add('hidden'));
+  modal.addEventListener('click', e => { if (e.target === modal) modal.classList.add('hidden'); });
+
+  // Live update every 30s
+  setInterval(tick, 30000);
+}
+main().catch(e => { document.body.innerHTML = '<pre style="color:#fca5a5;padding:20px">'+e+'</pre>'; });
+</script>
+</body>
+</html>

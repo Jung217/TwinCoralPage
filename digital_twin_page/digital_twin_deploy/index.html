@@ -1,0 +1,1602 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<title>珊瑚礁數位孿生平台 [展示資料]</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="icon" type="image/png" href="cihci.png" />
+<meta http-equiv="cache-control" content="no-store, no-cache, must-revalidate, max-age=0" />
+<meta http-equiv="pragma" content="no-cache" />
+<meta http-equiv="expires" content="0" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+    "@sparkjsdev/spark": "https://cdn.jsdelivr.net/npm/@sparkjsdev/spark@2.0.0/dist/spark.module.js"
+  }
+}
+</script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+        colors: {
+          ink:    { 950:'#f8fafc', 900:'#f1f5f9', 800:'#e2e8f0', 700:'#cbd5e1', 600:'#94a3b8' },
+          fog:    { 100:'#1e293b', 200:'#334155', 300:'#475569', 400:'#64748b', 500:'#94a3b8' },
+          coral:  { 300:'#fdba74', 400:'#fb923c', 500:'#f97316', 600:'#ea580c' },
+          warn:   { 400:'#fbbf24' },
+          danger: { 400:'#f87171' },
+          ok:     { 400:'#34d399' },
+        },
+        boxShadow: { card: '0 1px 3px rgba(0,0,0,.08), 0 4px 12px -4px rgba(0,0,0,.12)' }
+      }
+    }
+  };
+</script>
+<style>
+  html, body { font-family: 'Inter', system-ui, sans-serif; height: 100%; }
+  body { background: #ffffff; color:#1e293b; overflow: hidden; }
+  .badge-demo {
+    background: rgba(249, 115, 22, .1); color:#ea580c; border:1px solid rgba(249, 115, 22, .3);
+    padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight:600; letter-spacing:.04em;
+  }
+  .demo-tag {
+    font-size: 9px; letter-spacing: .08em; text-transform: uppercase;
+    color: #94a3b8; background:#f8fafc; border:1px solid #e2e8f0;
+    padding: 2px 6px; border-radius: 4px;
+  }
+  .pulse-dot { animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
+  .seg-btn { transition: all .15s ease; }
+  .seg-btn.active { background:#ffffff; color:#1e293b; box-shadow: inset 0 0 0 1px #cbd5e1; }
+  .seg-btn:not(.active):hover { color:#475569; }
+  .trend-up   { color:#f87171; }
+  .trend-down { color:#34d399; }
+  .trend-flat { color:#94a3b8; }
+  .reading-value { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+  .ico { width:14px; height:14px; display:inline-block; vertical-align:-2px; }
+  .chart-wrap { position: relative; width: 100%; height: 100%; min-height: 0; }
+  .modal-backdrop { background: rgba(0,0,0,.3); backdrop-filter: blur(2px); }
+  #viewer-root { position: absolute; inset: 0; }
+  #viewer-root canvas { display: block; width: 100% !important; height: 100% !important; }
+  .viewer-overlay { pointer-events: none; }
+  .viewer-overlay > * { pointer-events: auto; }
+  /* timeline */
+  .tl-axis { position: relative; height: 2px; background: linear-gradient(90deg, #334155 0%, #1e293b 100%); border-radius: 9999px; }
+  .tl-marker { position: absolute; top: 50%; transform: translate(-50%, -50%); }
+  .tl-dot { width: 12px; height: 12px; border-radius: 50%; }
+  .tl-dot-active   { background:#fb923c; box-shadow: 0 0 0 3px rgba(251,146,60,.2); }
+  .tl-dot-planned  { background:#334155; border: 1px dashed #64748b; }
+  /* swatch */
+  .swatch { width: 28px; height: 28px; border-radius: 6px; border: 1px solid rgba(0,0,0,.12); }
+  /* loading spinner */
+  .spinner { width: 36px; height: 36px; border: 3px solid rgba(0,0,0,.08); border-top-color: #fb923c; border-radius: 50%; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  /* keyboard key style */
+  .kbd {
+    display: inline-block;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    color: #334155;
+    min-width: 24px;
+    text-align: center;
+    line-height: 1.3;
+  }
+  /* native arrow on details summary off; we added our own */
+  .exp-card .exp-tip {
+    display: none; position: absolute; left: 0; right: 0; bottom: 100%; margin-bottom: 4px;
+    background: #1e293b; color: #e2e8f0; font-size: 11px; line-height: 1.4;
+    padding: 6px 8px; border-radius: 6px; border: 1px solid #334155;
+    box-shadow: 0 2px 8px rgba(0,0,0,.18); z-index: 10; pointer-events: none;
+  }
+  .exp-card:hover .exp-tip { display: block; }
+  #controls-help summary::-webkit-details-marker { display: none; }
+  #controls-help summary::marker { display: none; }
+  #controls-help[open] .chevron { transform: rotate(180deg); }
+</style>
+</head>
+<body class="h-full">
+
+<div class="h-full flex flex-col">
+
+  <!-- Header -->
+  <header class="px-5 py-3 border-b border-ink-800/80 flex items-center gap-4 shrink-0">
+    <div class="flex items-center gap-3">
+      <img src="cihci.png" alt="CIHCI Lab" class="w-9 h-9 rounded-lg object-contain" />
+      <div>
+        <div class="text-[15px] font-semibold tracking-tight">珊瑚礁數位孿生平台 <span class="badge-demo align-middle ml-1">展示資料</span></div>
+        <div class="text-[11px] text-fog-500">概念展示</div>
+      </div>
+    </div>
+    <div class="ml-auto flex items-center gap-4 text-[12px] text-fog-400">
+    </div>
+  </header>
+
+  <!-- Main 3-region area -->
+  <main class="flex-1 min-h-0 grid grid-cols-12 gap-3 p-3">
+
+    <!-- LEFT: 3D viewer -->
+    <section class="col-span-12 lg:col-span-7 xl:col-span-8 relative bg-ink-900/60 border border-ink-800 rounded-xl overflow-hidden shadow-card">
+      <div id="viewer-root"><canvas id="viewer-canvas"></canvas></div>
+      <!-- Top-left mode toggle -->
+      <div class="viewer-overlay absolute top-3 left-3 z-10 flex items-center gap-2">
+        <div class="flex bg-ink-900/85 backdrop-blur border border-ink-800 rounded-lg p-0.5 text-[12px] text-fog-400">
+          <button data-mode="natural"   class="mode-btn seg-btn active px-3 py-1 rounded-md">自然色</button>
+          <button data-mode="instances" class="mode-btn seg-btn px-3 py-1 rounded-md">群落染色</button>
+        </div>
+        <button id="reset-view" title="重設視角 (R)"
+          class="flex items-center gap-1.5 text-[11px] text-fog-300 bg-ink-900/85 backdrop-blur border border-ink-800 hover:border-coral-500/50 hover:text-fog-100 rounded-lg px-2.5 py-1">
+          <svg class="ico" style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+          <span>重設視角</span>
+        </button>
+        <label class="flex items-center gap-1.5 text-[11px] text-fog-400 bg-ink-900/85 backdrop-blur border border-ink-800 rounded-lg px-2 py-1 cursor-pointer hover:text-fog-200" title="除錯: 顯示全部 38 個群落邊界框">
+          <input id="debug-bbox" type="checkbox" class="accent-coral-500"/>
+          <span>除錯框線</span>
+        </label>
+        <label class="flex items-center gap-1.5 text-[11px] text-fog-400 bg-ink-900/85 backdrop-blur border border-ink-800 rounded-lg px-2 py-1 cursor-pointer hover:text-fog-200" title="顯示/隱藏小丑魚 A">
+          <input id="fish-toggle-a" type="checkbox" checked class="accent-coral-500"/>
+          <span>小丑魚 A</span>
+        </label>
+        <label class="flex items-center gap-1.5 text-[11px] text-fog-400 bg-ink-900/85 backdrop-blur border border-ink-800 rounded-lg px-2 py-1 cursor-pointer hover:text-fog-200" title="顯示/隱藏小丑魚 B">
+          <input id="fish-toggle-b" type="checkbox" checked class="accent-coral-500"/>
+          <span>小丑魚 B</span>
+        </label>
+      </div>
+      <!-- Top-right scene meta + FPS -->
+      <div class="viewer-overlay absolute top-3 right-3 z-10 text-[11px] text-fog-400 bg-ink-900/85 backdrop-blur border border-ink-800 rounded-lg px-3 py-1.5">
+        <span class="text-fog-500">高斯點數:</span> <span id="splat-count" class="text-fog-200 tabular-nums">—</span>
+        <span class="mx-2 text-ink-700">|</span>
+        <span class="text-fog-500">群落數:</span> <span id="colony-count" class="text-fog-200 tabular-nums">—</span>
+        <span class="mx-2 text-ink-700">|</span>
+        <span class="text-fog-500">FPS:</span> <span id="fps-readout" class="text-fog-200 tabular-nums">—</span>
+      </div>
+      <!-- Hover tooltip (weak-device fallback) -->
+      <div id="hover-tip" class="hidden fixed z-50 pointer-events-none text-[11px] text-fog-100 bg-ink-900/95 border border-coral-500/40 rounded px-2 py-1 shadow-card"></div>
+      <!-- Bottom-left controls panel -->
+      <div class="viewer-overlay absolute bottom-3 left-3 z-10">
+        <details id="controls-help" open class="bg-ink-900/85 backdrop-blur border border-ink-800 rounded-lg text-[10px] text-fog-300 open:shadow-card">
+          <summary class="cursor-pointer select-none px-3 py-1.5 list-none flex items-center gap-2 hover:text-fog-100">
+            <svg class="ico" style="width:11px;height:11px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span class="uppercase tracking-wider text-fog-400">操作說明</span>
+            <svg class="ico ml-1 chevron transition-transform" style="width:9px;height:9px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </summary>
+          <div class="px-3 pb-2 pt-1 border-t border-ink-800">
+            <table class="border-separate" style="border-spacing: 8px 2px">
+              <tbody class="align-middle">
+                <tr><td><kbd class="kbd">點擊</kbd></td>            <td class="text-fog-400">選取群落 · 飛近特寫</td></tr>
+                <tr><td><kbd class="kbd">拖曳</kbd></td>             <td class="text-fog-400">旋轉視角</td></tr>
+                <tr><td><kbd class="kbd">滾輪</kbd></td>            <td class="text-fog-400">縮放</td></tr>
+                <tr><td><kbd class="kbd">右鍵拖曳</kbd></td>       <td class="text-fog-400">平移</td></tr>
+                <tr><td><kbd class="kbd">R</kbd></td>                <td class="text-fog-400">重設為初始視角</td></tr>
+                <tr><td><kbd class="kbd">F</kbd></td>                <td class="text-fog-400">重新對焦場景</td></tr>
+                <tr><td><kbd class="kbd">Esc</kbd></td>              <td class="text-fog-400">取消選取</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+      </div>
+      <!-- Loading overlay -->
+      <div id="loading" class="viewer-overlay absolute inset-0 z-20 grid place-items-center bg-ink-950/85">
+        <div class="text-center">
+          <div class="spinner mx-auto"></div>
+          <div class="mt-3 text-[12px] text-fog-300" id="loading-msg">載入高斯潑濺場景中…</div>
+          <div class="mt-1 text-[10px] text-fog-500">首次載入可能需要 30–60 秒</div>
+        </div>
+      </div>
+      <!-- Error overlay -->
+      <div id="viewer-error" class="hidden viewer-overlay absolute inset-0 z-20 grid place-items-center bg-ink-950/90">
+        <div class="max-w-md text-center px-6">
+          <div class="text-coral-400 text-[13px] font-semibold">3D 檢視器初始化失敗</div>
+          <div class="text-[12px] text-fog-400 mt-2" id="viewer-error-msg"></div>
+          <div class="text-[10px] text-fog-500 mt-3">模型檔案可能過大，或瀏覽器/GPU 不支援 WebGL2。</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT column -->
+    <aside class="col-span-12 lg:col-span-5 xl:col-span-4 flex flex-col gap-3 min-h-0">
+
+      <!-- Colony info panel -->
+      <section class="flex-1 min-h-0 bg-ink-800/60 border border-ink-800 rounded-xl shadow-card flex flex-col">
+        <div class="px-4 py-3 border-b border-ink-800 flex items-center gap-2">
+          <svg class="ico text-coral-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-12V5l-8-3-8 3v5c0 8 8 12 8 12Z"/></svg>
+          <h2 class="text-[13px] font-semibold">群落資訊</h2>
+        </div>
+
+        <!-- Empty state -->
+        <div id="colony-empty" class="flex-1 grid place-items-center px-6 text-center">
+          <div>
+            <div class="w-12 h-12 mx-auto rounded-full bg-ink-900 border border-ink-800 grid place-items-center text-fog-500">
+              <svg class="ico" style="width:20px;height:20px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M3 12h3M18 12h3M12 3v3M12 18v3"/></svg>
+            </div>
+            <div class="mt-3 text-[13px] text-fog-300">點擊珊瑚群落以查看詳情</div>
+            <div class="text-[11px] text-fog-500 mt-1">將滑鼠移到 3D 模型上直接點擊</div>
+          </div>
+        </div>
+
+        <!-- Filled state (hidden until selected) -->
+        <div id="colony-detail" class="hidden flex-1 overflow-auto px-4 py-3 space-y-3">
+          <div class="flex items-center gap-3">
+            <div class="swatch" id="cd-swatch"></div>
+            <div>
+              <div class="text-[15px] font-semibold tracking-tight"><span id="cd-class">Acropora</span> <span class="text-fog-500 text-[12px]">#<span id="cd-id">—</span></span></div>
+              <div class="text-[11px] text-fog-500">分類信心度 <span id="cd-conf">—</span></div>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-[12px]">
+            <div class="bg-ink-900/60 border border-ink-800 rounded-lg p-2.5">
+              <div class="text-fog-500 text-[10px]">高斯點數</div>
+              <div class="reading-value font-semibold mt-0.5" id="cd-n">—</div>
+            </div>
+            <div class="bg-ink-900/60 border border-ink-800 rounded-lg p-2.5">
+              <div class="text-fog-500 text-[10px]">邊界體積 (m³)</div>
+              <div class="reading-value font-semibold mt-0.5" id="cd-bbox">—</div>
+            </div>
+          </div>
+          <div class="border-t border-ink-800 pt-2 mt-1">
+            <div class="text-[10px] text-fog-500 mb-1.5">實驗功能</div>
+            <div class="grid grid-cols-2 gap-2 text-[12px]">
+              <div class="exp-card bg-ink-900/60 border border-ink-800 rounded-lg p-2.5 cursor-help relative">
+                <div class="exp-tip">凸包體積 ÷ 邊界框體積，越小表示形狀越不規則</div>
+                <div class="text-fog-500 text-[10px]">分枝度</div>
+                <div class="reading-value font-semibold mt-0.5" id="cd-branch">—</div>
+              </div>
+              <div class="exp-card bg-ink-900/60 border border-ink-800 rounded-lg p-2.5 cursor-help relative">
+                <div class="exp-tip">1 − 平均 HSV 飽和度，越高表示顏色越白</div>
+                <div class="text-fog-500 text-[10px]">白化指標</div>
+                <div class="reading-value font-semibold mt-0.5" id="cd-bleach">—</div>
+              </div>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button id="cd-clear" class="flex-1 py-2 rounded-md bg-coral-500/15 hover:bg-coral-500/25 border border-coral-500/40 text-coral-300 text-[12px] font-medium">重設視角</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Environmental monitoring (compact) -->
+      <section class="flex-1 min-h-0 bg-ink-800/60 border border-ink-800 rounded-xl shadow-card flex flex-col">
+        <div class="px-4 py-3 border-b border-ink-800 flex items-center gap-2">
+          <svg class="ico text-coral-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0Z"/></svg>
+          <h2 class="text-[13px] font-semibold">環境監測 <span class="text-fog-500 text-[11px] font-normal">（模擬資料）</span></h2>
+          <div class="ml-auto flex items-center gap-2">
+            <div class="flex bg-ink-900/80 border border-ink-800 rounded-md p-0.5 text-[11px] text-fog-400">
+              <button data-range="24h" class="seg-btn px-2 py-0.5 rounded">24h</button>
+              <button data-range="7d"  class="seg-btn px-2 py-0.5 rounded">7d</button>
+              <button data-range="30d" class="seg-btn active px-2 py-0.5 rounded">30d</button>
+            </div>
+            <button id="alert-settings" class="w-6 h-6 grid place-items-center rounded-md bg-ink-900/80 border border-ink-800 text-fog-400 hover:text-fog-200 hover:border-ink-700" title="警示設定">
+              <svg class="ico" style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- 4 readings (compact row) -->
+        <div class="grid grid-cols-4 gap-2 px-3 pt-3">
+          <div class="reading-card bg-ink-900/60 border border-ink-800 rounded-lg p-2 relative">
+            <div class="text-[10px] text-fog-500 flex items-center"><span>水溫</span><span class="demo-tag ml-auto" style="font-size:8px;padding:1px 4px">demo</span></div>
+            <div class="flex items-baseline gap-0.5 mt-0.5">
+              <span id="r-sst" class="reading-value text-[18px] font-semibold">—</span>
+              <span class="text-fog-500 text-[10px]">°C</span>
+            </div>
+          </div>
+          <div class="reading-card bg-ink-900/60 border border-ink-800 rounded-lg p-2 relative">
+            <div class="text-[10px] text-fog-500 flex items-center"><span>pH</span><span class="demo-tag ml-auto" style="font-size:8px;padding:1px 4px">demo</span></div>
+            <div class="flex items-baseline gap-0.5 mt-0.5">
+              <span id="r-ph" class="reading-value text-[18px] font-semibold">—</span>
+            </div>
+          </div>
+          <div class="reading-card bg-ink-900/60 border border-ink-800 rounded-lg p-2 relative">
+            <div class="text-[10px] text-fog-500 flex items-center"><span>鹽度</span><span class="demo-tag ml-auto" style="font-size:8px;padding:1px 4px">demo</span></div>
+            <div class="flex items-baseline gap-0.5 mt-0.5">
+              <span id="r-sal" class="reading-value text-[18px] font-semibold">—</span>
+              <span class="text-fog-500 text-[10px]">‰</span>
+            </div>
+          </div>
+          <div class="reading-card bg-ink-900/60 border border-ink-800 rounded-lg p-2 relative">
+            <div class="text-[10px] text-fog-500 flex items-center"><span>溶氧</span><span class="demo-tag ml-auto" style="font-size:8px;padding:1px 4px">demo</span></div>
+            <div class="flex items-baseline gap-0.5 mt-0.5">
+              <span id="r-do" class="reading-value text-[18px] font-semibold">—</span>
+              <span class="text-fog-500 text-[10px]">mg/L</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4 mini charts -->
+        <div class="grid grid-cols-2 gap-2 p-3 flex-1 min-h-0">
+          <div class="bg-ink-900/60 border border-ink-800 rounded-lg p-2 flex flex-col min-h-0">
+            <div class="text-[10px] text-fog-500 mb-1">水溫趨勢</div>
+            <div class="chart-wrap"><canvas id="chart-sst"></canvas></div>
+          </div>
+          <div class="bg-ink-900/60 border border-ink-800 rounded-lg p-2 flex flex-col min-h-0">
+            <div class="text-[10px] text-fog-500 mb-1">pH 趨勢</div>
+            <div class="chart-wrap"><canvas id="chart-ph"></canvas></div>
+          </div>
+          <div class="bg-ink-900/60 border border-ink-800 rounded-lg p-2 flex flex-col min-h-0">
+            <div class="text-[10px] text-fog-500 mb-1">鹽度趨勢</div>
+            <div class="chart-wrap"><canvas id="chart-sal"></canvas></div>
+          </div>
+          <div class="bg-ink-900/60 border border-ink-800 rounded-lg p-2 flex flex-col min-h-0">
+            <div class="text-[10px] text-fog-500 mb-1">溶氧趨勢</div>
+            <div class="chart-wrap"><canvas id="chart-do"></canvas></div>
+          </div>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <!-- Footer -->
+  <footer class="px-5 py-2.5 border-t border-ink-800/80 shrink-0 text-[10px] text-fog-500 leading-relaxed">
+    <div class="flex items-start gap-2">
+      <svg class="ico mt-0.5 text-warn-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span>本頁環境感測數據為<b>模擬展示</b>用途。3D 珊瑚模型及群落分類源自實際田野調查資料（T0: 2026-05）。感測器整合開發中。</span>
+    </div>
+  </footer>
+</div>
+
+<!-- Alert settings modal -->
+<div id="modal-alert" class="hidden fixed inset-0 modal-backdrop z-50 grid place-items-center p-4">
+  <div class="bg-ink-800 border border-ink-700 rounded-xl shadow-card max-w-sm w-full p-5">
+    <div class="flex items-center gap-2 mb-2">
+      <svg class="ico text-coral-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <div class="text-[14px] font-semibold">自訂警示</div>
+      <button data-close-modal="modal-alert" class="ml-auto text-fog-500 hover:text-fog-200 text-lg leading-none">×</button>
+    </div>
+    <div class="text-[13px] text-fog-300">功能開發中：可自訂環境指標警示閾值（例如水溫 &gt; 29°C、pH &lt; 7.9）。</div>
+    <button data-close-modal="modal-alert" class="mt-4 w-full py-2 rounded-md bg-coral-500 hover:bg-coral-600 text-white text-[13px] font-medium">了解</button>
+  </div>
+</div>
+
+<!-- T1 planned modal -->
+<div id="modal-t1" class="hidden fixed inset-0 modal-backdrop z-50 grid place-items-center p-4">
+  <div class="bg-ink-800 border border-ink-700 rounded-xl shadow-card max-w-sm w-full p-5">
+    <div class="flex items-center gap-2 mb-2">
+      <svg class="ico text-coral-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <div class="text-[14px] font-semibold">T1 · 計畫調查</div>
+      <button data-close-modal="modal-t1" class="ml-auto text-fog-500 hover:text-fog-200 text-lg leading-none">×</button>
+    </div>
+    <div class="text-[13px] text-fog-300">未來的調查尚未進行。完成 T1 後，將可啟用群落生長比較功能。</div>
+    <button data-close-modal="modal-t1" class="mt-4 w-full py-2 rounded-md bg-coral-500 hover:bg-coral-600 text-white text-[13px] font-medium">了解</button>
+  </div>
+</div>
+
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import {
+  SparkRenderer, SplatMesh, SplatFileType,
+  SplatEdit, SplatEditSdf, SplatEditSdfType, SplatEditRgbaBlendMode,
+} from '@sparkjsdev/spark';
+
+// =========================================
+//  State
+// =========================================
+const STATE = {
+  envData: null,
+  colonies: null,
+  range: '30d',
+  charts: {},
+  current: { sst:0, ph:0, sal:0, do:0 },
+  viewer: null,
+  currentMode: 'natural',
+};
+
+const FMT = {
+  sst: v => v.toFixed(2),
+  ph:  v => v.toFixed(2),
+  sal: v => v.toFixed(2),
+  do:  v => v.toFixed(2),
+};
+const UNITS = { sst: '°C', ph: '', sal: '‰', do: 'mg/L' };
+
+// =========================================
+//  Charts
+// =========================================
+const bleachLinePlugin = {
+  id: 'bleachLine',
+  afterDatasetsDraw(chart) {
+    const yScale = chart.scales.y; const xScale = chart.scales.x;
+    const y = yScale.getPixelForValue(29.0);
+    if (!isFinite(y)) return;
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.strokeStyle = '#f87171'; ctx.lineWidth = 1; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(xScale.left, y); ctx.lineTo(xScale.right, y); ctx.stroke();
+    ctx.setLineDash([]); ctx.restore();
+  }
+};
+
+function hexToRgba(hex, a) {
+  const h = hex.replace('#',''); const n = parseInt(h, 16);
+  const r = (n>>16)&255, g=(n>>8)&255, b=n&255;
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+function buildMiniChart(canvasId, key, color, axis) {
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  const isSst = key === 'sst';
+  return new Chart(ctx, {
+    type: 'line',
+    data: { datasets: [{
+      data: [],
+      borderColor: color,
+      borderWidth: 1.2,
+      tension: 0.25,
+      pointRadius: 0,
+      pointHoverRadius: 3,
+      fill: { target: 'origin', above: hexToRgba(color, 0.07) },
+    }]},
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#0b1220', borderColor: '#1e293b', borderWidth: 1,
+          titleColor: '#e2e8f0', bodyColor: '#cbd5e1', padding: 6,
+          displayColors: false, titleFont: {size: 10}, bodyFont: {size: 11},
+          callbacks: {
+            title: items => new Date(items[0].parsed.x).toLocaleString(),
+            label: ctx2 => ` ${FMT[key](ctx2.parsed.y)} ${UNITS[key]}`.trimEnd(),
+          }
+        },
+      },
+      scales: {
+        x: { type: 'time', display: false },
+        y: { ticks: { color: '#475569', font: { size: 9 }, maxTicksLimit: 3 },
+             grid: { color: 'rgba(30,41,59,.5)', drawBorder: false },
+             suggestedMin: axis.min, suggestedMax: axis.max },
+      },
+    },
+    plugins: isSst ? [bleachLinePlugin] : [],
+  });
+}
+
+function getSeries(range) {
+  const d = STATE.envData;
+  if (range === '24h') return d.history_24h;
+  if (range === '7d')  return d.history_30d.slice(-24*7 - 1);
+  return d.history_30d;
+}
+
+function refreshCharts() {
+  const s = getSeries(STATE.range);
+  const make = key => s.map(p => ({ x: new Date(p.t).getTime(), y: p[key] }));
+  ['sst','ph','sal','do'].forEach(k => {
+    STATE.charts[k].data.datasets[0].data = make(k);
+  });
+  const sstData = STATE.charts.sst.data.datasets[0].data;
+  STATE.charts.sst.data.datasets[0].pointRadius = sstData.map(p => p.y >= 28.5 ? 2.5 : 0);
+  STATE.charts.sst.data.datasets[0].pointBackgroundColor = sstData.map(p => p.y >= 28.5 ? '#f87171' : 'transparent');
+  Object.values(STATE.charts).forEach(c => c.update('none'));
+}
+
+function setRange(r) {
+  STATE.range = r;
+  document.querySelectorAll('.seg-btn[data-range]').forEach(b => b.classList.toggle('active', b.dataset.range === r));
+  refreshCharts();
+}
+
+// =========================================
+//  Readings + live tick
+// =========================================
+function setReading(key, val) {
+  STATE.current[key] = val;
+  document.getElementById('r-'+key).textContent = FMT[key](val);
+}
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+function jitter(amp){ return (Math.random()*2-1) * amp; }
+
+function tick() {
+  const c = STATE.current;
+  setReading('sst', clamp(c.sst + jitter(0.1), 26, 30));
+  setReading('ph',  clamp(c.ph  + jitter(0.02), 7.9, 8.3));
+  setReading('sal', clamp(c.sal + jitter(0.05), 34, 36));
+  setReading('do',  clamp(c.do  + jitter(0.1), 5, 8));
+
+}
+
+// =========================================
+//  Modals
+// =========================================
+function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+document.getElementById('alert-settings').addEventListener('click', () => openModal('modal-alert'));
+document.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => closeModal(b.dataset.closeModal)));
+document.querySelectorAll('.modal-backdrop').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.add('hidden'); }));
+
+// =========================================
+//  3D viewer
+// =========================================
+// 兩種觀察模式: 自然色 / 依 colony 染色
+// (picking 不依賴可見的 bbox — 用獨立的 Box3 raycaster targets，所以兩個 mode 都能直接點選 3D model)
+// 註: 'ply' key 保留為向後相容名稱，實際載入是 SOG (Phase 1 轉檔結果)
+const MODE_CONFIG = {
+  natural:   { ply: 'coral_main_2.sog',      label: '自然色' },
+  instances: { ply: 'coral_instances_2.sog', label: '群落染色' },
+};
+STATE.currentMode = 'natural';
+STATE.currentPly  = MODE_CONFIG.natural.ply;
+STATE.selectedColonyId = null;
+
+function computeSceneBounds() {
+  // scene_bounds.json 的 keys 是 .ply 檔名；目前可能載入 .sog（Phase 1 轉檔）。
+  // 兩者座標一致，做名稱正規化查找。
+  const sogKey = STATE.currentPly;
+  const plyKey = sogKey.replace(/\.sog$/, '.ply');
+  const b = STATE.sceneBounds && (STATE.sceneBounds[sogKey] || STATE.sceneBounds[plyKey]);
+  if (b) {
+    // 用 robust_*（2%-98% percentile）避開 SuperSplat 後 outlier splat 把 bbox 拉大的問題
+    return {
+      center: b.robust_center || b.center,
+      extent: b.robust_extent || b.extent,
+      min:    b.robust_min    || b.bbox_min,
+      max:    b.robust_max    || b.bbox_max,
+    };
+  }
+  // fallback：colonies bbox（M4 才會用得到，且只在 PLY 跟 colonies 同座標時對位）
+  let xmin=Infinity,ymin=Infinity,zmin=Infinity, xmax=-Infinity,ymax=-Infinity,zmax=-Infinity;
+  for (const c of STATE.colonies.colonies) {
+    const [x0,y0,z0] = c.bbox_min, [x1,y1,z1] = c.bbox_max;
+    if (x0<xmin) xmin=x0; if (y0<ymin) ymin=y0; if (z0<zmin) zmin=z0;
+    if (x1>xmax) xmax=x1; if (y1>ymax) ymax=y1; if (z1>zmax) zmax=z1;
+  }
+  return {
+    center: [(xmin+xmax)/2, (ymin+ymax)/2, (zmin+zmax)/2],
+    extent: [xmax-xmin, ymax-ymin, zmax-zmin],
+    min: [xmin,ymin,zmin], max: [xmax,ymax,zmax],
+  };
+}
+
+function fitCameraToScene(viewer) {
+  const b = computeSceneBounds();
+  const [cx, cy, cz] = b.center;
+  const radius = Math.max(...b.extent) * 0.8 + 2;
+  // mkkellogg viewer 預設 -Y up（與 SuperSplat 的 +Y up 相反），所以 camera Y 要在 target「下方」(world Y 更小)
+  // 才會在畫面上呈現「斜上方俯視」效果，與 SuperSplat 內看到的方向一致。
+  viewer.camera.position.set(cx + radius, cy - radius * 0.7, cz + radius);
+  if (viewer.controls && viewer.controls.target) {
+    viewer.controls.target.set(cx, cy, cz);
+    viewer.controls.update();
+  }
+  console.log('[fit] scene center=', b.center, 'extent=', b.extent, 'radius=', radius);
+}
+
+// =========================================
+//  Bbox overlay (colony picking targets + visual hint in Bbox mode)
+// =========================================
+const COLOR_NORMAL    = 0xfb923c;  // coral-400
+const COLOR_HIGHLIGHT = 0xfca5a5;  // danger-300
+const COLOR_DIM       = 0x475569;  // ink-600
+
+function buildBboxOverlay(scene) {
+  // 為每個 colony 建立 Box3 (純資料，給 raycaster 用) + Box3Helper (視覺，預設不可見)
+  // 整個 group 永遠 visible=true；個別 helper 只在「被選中」時才 visible=true。
+  const group = new THREE.Group();
+  group.name = 'colonyBboxes';
+  group.visible = true;
+  const items = STATE.colonies.colonies.map((c) => {
+    const box = new THREE.Box3(
+      new THREE.Vector3(c.bbox_min[0], c.bbox_min[1], c.bbox_min[2]),
+      new THREE.Vector3(c.bbox_max[0], c.bbox_max[1], c.bbox_max[2]),
+    );
+    const helper = new THREE.Box3Helper(box, COLOR_HIGHLIGHT);
+    helper.material.transparent = true;
+    helper.material.opacity = 0.95;
+    helper.material.depthTest = false;     // 即使 splat 在前面也能看到選中標示
+    helper.material.depthWrite = false;
+    helper.renderOrder = 999;
+    helper.visible = false;                 // 預設隱形
+    helper.userData.colony = c;
+    group.add(helper);
+    return { colony: c, box, helper };
+  });
+  scene.add(group);
+  STATE.bboxGroup = group;
+  STATE.bboxItems = items;
+}
+
+function setBboxHighlight(instanceId) {
+  // 一般使用者體驗：選中時不畫 bbox（hover 染色已經當作視覺回饋）。
+  // Debug bbox 勾選時才顯示 38 個 wireframe，且選中那個變紅色。
+  const dbg = STATE.debugBbox;
+  STATE.bboxItems.forEach(it => {
+    const sel = (it.colony.instance_id === instanceId);
+    it.helper.visible = dbg;
+    it.helper.material.color.setHex(sel ? COLOR_HIGHLIGHT : COLOR_NORMAL);
+    it.helper.material.opacity = sel ? 0.95 : 0.5;
+  });
+}
+
+// =========================================
+//  Mode switching: swap splat scene + toggle bbox group
+// =========================================
+async function setMode(mode) {
+  if (mode === STATE.currentMode || STATE.modeSwitching) return;
+  const cfg = MODE_CONFIG[mode];
+  if (!cfg) return;
+  STATE.modeSwitching = true;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  const loading = document.getElementById('loading');
+  const loadingMsg = document.getElementById('loading-msg');
+  try {
+    if (cfg.ply !== STATE.currentPly) {
+      loadingMsg.textContent = `載入${cfg.label}場景中…`;
+      loading.classList.remove('hidden');
+      const v = STATE.viewer;
+      const url = './assets/' + cfg.ply;
+      const next = new SplatMesh({
+        url,
+        fileType: SplatFileType.PCSOGSZIP,
+        raycastable: true,
+        minRaycastOpacity: 0.05,
+      });
+      if (v.splat) {
+        next.quaternion.copy(v.splat.quaternion);
+        next.position.copy(v.splat.position);
+        next.scale.copy(v.splat.scale);
+      }
+      await Promise.race([
+        next.initialized,
+        new Promise((_, rej) => setTimeout(() => rej(new Error('splat load timeout 60s')), 60000)),
+      ]);
+      // swap
+      if (v.splat) {
+        v.scene.remove(v.splat);
+        v.splat.dispose?.();
+      }
+      v.scene.add(next);
+      v.splat = next;
+      STATE.currentPly = cfg.ply;
+      loading.classList.add('hidden');
+      const n = next.numSplats ?? next.packedSplats?.numSplats ?? null;
+      document.getElementById('splat-count').textContent = n ? n.toLocaleString() : '—';
+    }
+    if (STATE.viewer.splat) STATE.viewer.splat.visible = true;
+    STATE.currentMode = mode;
+    installPickListeners();
+  } catch (err) {
+    console.error('setMode error', err);
+    loading.classList.add('hidden');
+  } finally {
+    STATE.modeSwitching = false;
+  }
+}
+
+// =========================================
+//  Picking: canvas click -> ray -> nearest bbox -> show colony
+// =========================================
+const PICK_RAYCASTER = new THREE.Raycaster();
+const PICK_MOUSE     = new THREE.Vector2();
+
+const PICK_SCREEN_FALLBACK_PX = 250;  // 螢幕空間最近中心 fallback 距離閾值（放寬）
+const PICK_DRAG_THRESHOLD_PX = 8;     // 超過此移動量算 drag 不 picking
+const PICK_MAX_HOLD_MS       = 800;   // 超過此持續時間算 hold 不 picking
+
+function getViewerCanvas() {
+  return document.querySelector('#viewer-root canvas');
+}
+
+// 視覺回饋：點擊位置短暫閃 dot
+function flashPickIndicator(x, y, color = '#fb923c') {
+  const dot = document.createElement('div');
+  dot.style.cssText = `position:fixed;left:${x-8}px;top:${y-8}px;width:16px;height:16px;border-radius:50%;border:2px solid ${color};background:transparent;pointer-events:none;z-index:9999;transition:transform .4s ease-out, opacity .4s ease-out;`;
+  document.body.appendChild(dot);
+  requestAnimationFrame(() => { dot.style.transform = 'scale(2.2)'; dot.style.opacity = '0'; });
+  setTimeout(() => dot.remove(), 500);
+}
+
+// =========================================
+//  Pick listeners — 多事件 + capture phase + 大量 log，最大化魯棒性
+// =========================================
+function installPickListeners() {
+  const root = document.getElementById('viewer-root');
+  if (!root) { console.warn('[pick] viewer-root not found'); return; }
+  if (root.__pickInstalled) { console.log('[pick] already installed (skip)'); return; }
+  root.__pickInstalled = true;
+
+  let pickStart = null;
+
+  const onDown = (e) => {
+    if (e.button !== 0) return;
+    pickStart = { x: e.clientX, y: e.clientY, t: performance.now(), type: e.type };
+    console.log('[pick] DOWN', e.type, `(${e.clientX}, ${e.clientY})`);
+  };
+  const onUp = (e) => {
+    if (e.button !== 0) return;
+    if (!pickStart) { console.log('[pick] UP', e.type, '(no pickStart, skip)'); return; }
+    const dx = Math.abs(e.clientX - pickStart.x);
+    const dy = Math.abs(e.clientY - pickStart.y);
+    const dt = performance.now() - pickStart.t;
+    console.log('[pick] UP', e.type, `dx=${dx} dy=${dy} dt=${dt.toFixed(0)}ms`);
+    const wasClick = (dx < PICK_DRAG_THRESHOLD_PX && dy < PICK_DRAG_THRESHOLD_PX && dt < PICK_MAX_HOLD_MS);
+    pickStart = null;
+    if (wasClick) {
+      flashPickIndicator(e.clientX, e.clientY);
+      onPickClick(e);
+    } else {
+      console.log('[pick] -> treated as drag, skipping picking');
+    }
+  };
+  const onLeave = () => { if (pickStart) console.log('[pick] cancel (mouse left root)'); pickStart = null; };
+
+  // 同時掛 pointer + mouse 兩種事件; capture phase 確保比 mkkellogg / OrbitControls 早觸發
+  root.addEventListener('pointerdown', onDown, true);
+  root.addEventListener('mousedown',   onDown, true);
+  root.addEventListener('pointerup',   onUp,   true);
+  root.addEventListener('mouseup',     onUp,   true);
+  root.addEventListener('mouseleave',  onLeave, true);
+  root.addEventListener('pointerleave',onLeave, true);
+  // window 後備（萬一事件沒到 root）
+  window.addEventListener('mouseup',   (e) => { if (pickStart) onUp(e); }, true);
+  console.log('[pick] listeners installed on #viewer-root (pointer+mouse, capture phase)');
+}
+
+function nearestColonyByPoint(point) {
+  // 給定世界座標 hit point，找最近 colony centroid
+  let best = null, bestD2 = Infinity;
+  for (const it of STATE.bboxItems) {
+    const c = it.colony.centroid;
+    const dx = point.x - c[0], dy = point.y - c[1], dz = point.z - c[2];
+    const d2 = dx*dx + dy*dy + dz*dz;
+    if (d2 < bestD2) { bestD2 = d2; best = it; }
+  }
+  return best;
+}
+
+// 找出滑鼠下的 colony（不執行任何 side effect）。供 click + hover 共用。
+// includeSplatRaycast = false 時跳過 Spark 原生 raycast（hover 不能用，太貴）
+function findColonyAt(e, includeSplatRaycast = false) {
+  if (!STATE.viewer || !STATE.bboxItems) return { item: null, method: 'none' };
+  const canvas = getViewerCanvas();
+  if (!canvas) return { item: null, method: 'none' };
+  const rect = canvas.getBoundingClientRect();
+  const ndcX =  ((e.clientX - rect.left) / rect.width)  * 2 - 1;
+  const ndcY = -((e.clientY - rect.top)  / rect.height) * 2 + 1;
+  PICK_MOUSE.set(ndcX, ndcY);
+  PICK_RAYCASTER.setFromCamera(PICK_MOUSE, STATE.viewer.camera);
+
+  // Pass 1: ray vs colony bbox（cheap, 38 個 box 對 ray 測試，每次 hover 都能跑）
+  let best = null;
+  let bestDist = Infinity;
+  const hitPoint = new THREE.Vector3();
+  for (const it of STATE.bboxItems) {
+    if (PICK_RAYCASTER.ray.intersectBox(it.box, hitPoint)) {
+      const d = PICK_RAYCASTER.ray.origin.distanceTo(hitPoint);
+      if (d < bestDist) { bestDist = d; best = it; }
+    }
+  }
+  if (best) return { item: best, method: 'bbox' };
+
+  // Pass 2: Spark 原生 splat raycasting (只有 click 才用)
+  if (includeSplatRaycast && STATE.viewer.splat) {
+    try {
+      const hits = PICK_RAYCASTER.intersectObject(STATE.viewer.splat, true);
+      if (hits && hits.length > 0 && hits[0].point) {
+        const it = nearestColonyByPoint(hits[0].point);
+        if (it) return { item: it, method: 'splat-ray' };
+      }
+    } catch { /* fall through */ }
+  }
+
+  // Pass 3: 螢幕空間最近 centroid fallback
+  const cam = STATE.viewer.camera;
+  const tmp = new THREE.Vector3();
+  let bestScreenDist = Infinity;
+  for (const it of STATE.bboxItems) {
+    const c = it.colony.centroid;
+    tmp.set(c[0], c[1], c[2]).project(cam);
+    if (tmp.z > 1 || tmp.z < -1) continue;
+    const sx = (tmp.x + 1) * 0.5 * rect.width;
+    const sy = (1 - tmp.y) * 0.5 * rect.height;
+    const dx = sx - (e.clientX - rect.left);
+    const dy = sy - (e.clientY - rect.top);
+    const d2 = dx*dx + dy*dy;
+    if (d2 < bestScreenDist) { bestScreenDist = d2; best = it; }
+  }
+  if (best && Math.sqrt(bestScreenDist) > PICK_SCREEN_FALLBACK_PX) best = null;
+  return best ? { item: best, method: 'screen-fallback' } : { item: null, method: 'none' };
+}
+
+function onPickClick(e) {
+  const { item: best, method } = findColonyAt(e, true);
+  console.log('[pick]', method, best ? `colony #${best.colony.instance_id} ${best.colony.class_name}` : 'no hit');
+  if (best) {
+    showColony(best.colony);
+    flyToColony(best.colony, 700);
+  }
+}
+
+// =========================================
+//  Colony info panel
+// =========================================
+function rgbToCss(rgb) {
+  const r = Math.round(Math.max(0, Math.min(1, rgb[0])) * 255);
+  const g = Math.round(Math.max(0, Math.min(1, rgb[1])) * 255);
+  const b = Math.round(Math.max(0, Math.min(1, rgb[2])) * 255);
+  return `rgb(${r},${g},${b})`;
+}
+
+const CLASS_ZH = {
+  Acropora: '軸孔珊瑚', Montipora: '表孔珊瑚', Pocillopora: '鹿角珊瑚',
+  Porites: '微孔珊瑚', Pavona: '雀屏珊瑚', Stylophora: '柱珊瑚',
+  Euphyllia: '真葉珊瑚', Favites: '角蜂巢珊瑚',
+  Seriatopora: '列孔珊瑚', Galaxea: '星珊瑚', Favia: '菊珊瑚',
+  Fungia: '蕈珊瑚', Turbinaria: '陀螺珊瑚', Platygyra: '角菊珊瑚',
+  Goniastrea: '角星珊瑚', Hydnophora: '刺星珊瑚', Lobophyllia: '瓣葉珊瑚',
+  Merulina: '縫珊瑚', Echinopora: '棘杯珊瑚', Goniopora: '管孔珊瑚',
+};
+
+function bilingualClass(name) {
+  const zh = CLASS_ZH[name];
+  return zh ? `${zh} ${name}` : (name || '?');
+}
+
+function showColony(c) {
+  STATE.selectedColonyId = c.instance_id;
+  setBboxHighlight(c.instance_id);
+
+  document.getElementById('colony-empty').classList.add('hidden');
+  document.getElementById('colony-detail').classList.remove('hidden');
+
+  document.getElementById('cd-class' ).textContent = bilingualClass(c.class_name);
+  document.getElementById('cd-id'    ).textContent = c.instance_id;
+  document.getElementById('cd-conf'  ).textContent = (c.mean_class_conf || 0).toFixed(2);
+  document.getElementById('cd-n'     ).textContent = (c.n_gaussians || 0).toLocaleString();
+  document.getElementById('cd-bbox'  ).textContent = (c.bbox_volume   || 0).toFixed(2);
+  document.getElementById('cd-branch').textContent = (c.branchiness   || 0).toFixed(2);
+  document.getElementById('cd-bleach').textContent = (c.bleaching_proxy || 0).toFixed(2);
+  document.getElementById('cd-swatch').style.background = rgbToCss(c.mean_rgb || [0.5,0.5,0.5]);
+}
+
+function clearColony() {
+  STATE.selectedColonyId = null;
+  setBboxHighlight(null);
+  document.getElementById('colony-empty').classList.remove('hidden');
+  document.getElementById('colony-detail').classList.add('hidden');
+}
+
+// =========================================
+//  Camera fly-to (View in 3D button)
+// =========================================
+// Camera 動畫核心：lerp 從目前 (或 override 起點) 到指定終點
+function animateCameraTo(endPos, endTgt, durationMs = 700, startPosOverride = null, startTgtOverride = null) {
+  const v = STATE.viewer;
+  if (!v) return;
+  const startPos = (startPosOverride || v.camera.position).clone();
+  const startTgt = (startTgtOverride || v.controls.target).clone();
+  const t0 = performance.now();
+  function step(now) {
+    const t = Math.min(1, (now - t0) / durationMs);
+    const e = t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2;  // easeInOutQuad
+    v.camera.position.lerpVectors(startPos, endPos, e);
+    v.controls.target.lerpVectors(startTgt, endTgt, e);
+    v.controls.update();
+    if (t < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+function flyToColony(c, durationMs = 700, startPosOverride = null, startTgtOverride = null) {
+  const min = new THREE.Vector3(...c.bbox_min);
+  const max = new THREE.Vector3(...c.bbox_max);
+  const center = min.clone().add(max).multiplyScalar(0.5);
+  const size = max.clone().sub(min);
+  const colonyMax = Math.max(size.x, size.y, size.z);
+  // 框景距離：至少看得到整顆 bbox + padding，小 colony 不至於糊到鏡頭裡
+  const r = Math.max(colonyMax * 2.5 + 2.0, 3.5);
+
+  // 視線方向: 從「場景中心 → colony」延伸 → camera 站在 scene 外側看回 colony
+  // → 確保其他 colony 不會擋在 camera 跟目標之間
+  let dir;
+  const sb = STATE.sceneBounds && STATE.sceneBounds[STATE.currentPly];
+  if (sb && sb.robust_center) {
+    const sceneCenter = new THREE.Vector3(sb.robust_center[0], sb.robust_center[1], sb.robust_center[2]);
+    dir = center.clone().sub(sceneCenter);
+    if (dir.lengthSq() < 0.04) {
+      // colony 剛好在 scene center，沒有「外側」可選 → 退回斜上方
+      dir.set(1, -0.4, 1);
+    }
+    dir.normalize();
+    // 再混入一點 -Y 偏移（mkkellogg cameraUp=-Y, -Y 是視覺上方），讓視角略為俯視而非完全水平
+    dir.y -= 0.35;
+    dir.normalize();
+  } else {
+    dir = new THREE.Vector3(1, -0.4, 1).normalize();
+  }
+
+  const endPos = center.clone().add(dir.multiplyScalar(r));
+  const endTgt = center.clone();
+  animateCameraTo(endPos, endTgt, durationMs, startPosOverride, startTgtOverride);
+}
+
+function resetView(durationMs = 700) {
+  if (!STATE.initialCameraPos || !STATE.initialCameraTgt) return;
+  clearColony();  // 同時取消選取
+  animateCameraTo(STATE.initialCameraPos.clone(), STATE.initialCameraTgt.clone(), durationMs);
+  console.log('[reset-view] -> initial camera');
+}
+
+// =========================================
+//  Hover highlight (Route A: SDF-box clipped instance overlay)
+// =========================================
+// 註: 這是視覺**近似**做法 — 用 colony bbox 區域裁切 instance-coloured SOG 當 hover overlay。
+// Bbox 邊緣可能有少數 splat 不屬於該 colony，但 demo 場景中觀眾不會察覺。
+// 未來若需 splat 等級精準度，可升級到「per-splat instance_id mask texture + dyno modifier」
+// (Route C)，需要從 coral_labeled_v3.ply 預計算 instance LUT 並寫 GLSL shader。
+
+function detectWeakDevice() {
+  // 手機 / 平板：直接 fallback (mobile GPU 通常吃不消雙 SplatMesh + SDF)
+  if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) return true;
+  // 低核心數
+  if (navigator.hardwareConcurrency && navigator.hardwareConcurrency < 4) return true;
+  // 低裝置記憶體
+  if (navigator.deviceMemory && navigator.deviceMemory < 4) return true;
+  return false;
+}
+
+function lazyLoadInstanceMesh() {
+  if (STATE.isWeakDevice) return;
+  if (STATE.instanceMesh || STATE.instanceMeshLoading) return;
+  STATE.instanceMeshLoading = true;
+  console.log('[hover] lazy-loading instances overlay mesh...');
+  const t0 = performance.now();
+  const mesh = new SplatMesh({
+    url: './assets/coral_instances_2.sog',
+    fileType: SplatFileType.PCSOGSZIP,
+    raycastable: false,  // hover overlay 不需被 raycast
+  });
+  mesh.visible = false;       // 預設整片不可見，hover 時才打開
+  mesh.frustumCulled = false;
+  STATE.viewer.scene.add(mesh);
+  mesh.initialized.then(() => {
+    STATE.instanceMesh = mesh;
+    STATE.instanceMeshReady = true;
+    STATE.instanceMeshLoading = false;
+    const dt = Math.round(performance.now() - t0);
+    console.log(`[hover] instances mesh ready (${dt}ms)`);
+    // 把 SplatEdit + SplatEditSdf 掛在 instanceMesh 之下 — 限制 edit scope，
+    // 避免被 Spark 當成 globalEdits 套到 coral_main 上把礁石本體清空。
+    // (mesh.edits = [edit] 在 applyHoverHighlight 內仍會設，作為雙保險 opt-in)
+    mesh.add(STATE.hoverEdit);
+    mesh.add(STATE.hoverSdf);
+    // 若已有 hovered colony 等載入，補打開
+    if (STATE.hoveredColonyId != null) applyHoverHighlight(STATE.hoveredColonyId);
+  }).catch(err => {
+    console.error('[hover] instances mesh load failed', err);
+    STATE.instanceMeshLoading = false;
+  });
+}
+
+// 建立 SDF box + Edit (一次性建立，hover 時只更新 transform)
+// invert=true + opacity=0 + rgbaBlendMode=MULTIPLY → box 外的 splat opacity * 0 = 隱形
+// 結果：instance mesh 只在 box 內可見
+function buildHoverEdit() {
+  const sdf = new SplatEditSdf({
+    type: SplatEditSdfType.BOX,
+    invert: true,    // 對「box 外」套用 edit
+    opacity: 0,      // box 外 opacity = 0
+  });
+  const edit = new SplatEdit({
+    sdfs: [sdf],
+    rgbaBlendMode: SplatEditRgbaBlendMode.MULTIPLY,
+  });
+  STATE.hoverSdf = sdf;
+  STATE.hoverEdit = edit;
+}
+
+function applyHoverHighlight(instanceId) {
+  if (STATE.isWeakDevice) return;
+  const mesh = STATE.instanceMesh;
+  if (!mesh || !STATE.instanceMeshReady) return;
+  if (instanceId == null) {
+    mesh.visible = false;
+    return;
+  }
+  const it = STATE.bboxItems.find(b => b.colony.instance_id === instanceId);
+  if (!it) { mesh.visible = false; return; }
+  // 設定 SDF box transform = colony bbox
+  const min = it.box.min, max = it.box.max;
+  const cx = (min.x + max.x) * 0.5;
+  const cy = (min.y + max.y) * 0.5;
+  const cz = (min.z + max.z) * 0.5;
+  const hx = (max.x - min.x) * 0.5;
+  const hy = (max.y - min.y) * 0.5;
+  const hz = (max.z - min.z) * 0.5;
+  STATE.hoverSdf.position.set(cx, cy, cz);
+  STATE.hoverSdf.scale.set(hx, hy, hz);
+  STATE.hoverSdf.updateMatrixWorld(true);
+  mesh.edits = [STATE.hoverEdit];
+  mesh.visible = true;
+}
+
+function setHoveredColony(item) {
+  const newId = item ? item.colony.instance_id : null;
+  if (newId === STATE.hoveredColonyId) return;
+  STATE.hoveredColonyId = newId;
+
+  // Cursor style: 指到 colony 時變 pointer
+  const canvas = getViewerCanvas();
+  if (canvas) canvas.style.cursor = (newId != null) ? 'pointer' : '';
+
+  // 弱裝置 fallback: tooltip 顯示 class + id
+  if (STATE.isWeakDevice) {
+    const tip = document.getElementById('hover-tip');
+    if (tip) {
+      if (item) {
+        tip.textContent = `${item.colony.class_name} #${item.colony.instance_id}`;
+        tip.classList.remove('hidden');
+      } else {
+        tip.classList.add('hidden');
+      }
+    }
+    return;
+  }
+
+  // 正常裝置: 套用 instance overlay 染色
+  applyHoverHighlight(newId);
+}
+
+// pointermove 用 rAF throttle: 只存最新 event，animation loop 內處理
+let _pendingHover = null;
+function onPointerMove(e) {
+  _pendingHover = e;
+  // 弱裝置: 即時更新 tooltip 位置
+  if (STATE.isWeakDevice) {
+    const tip = document.getElementById('hover-tip');
+    if (tip && !tip.classList.contains('hidden')) {
+      tip.style.left = (e.clientX + 14) + 'px';
+      tip.style.top  = (e.clientY + 14) + 'px';
+    }
+  }
+}
+function processPendingHover() {
+  if (!_pendingHover) return;
+  const e = _pendingHover; _pendingHover = null;
+  const { item } = findColonyAt(e, false);  // hover 跳過 splat raycast
+  setHoveredColony(item);
+}
+
+// =========================================
+//  Clownfish 小丑魚 — FBX model + swimming animation
+// =========================================
+const CLOWNFISH = [];
+const FISH_MIXERS = [];
+let FISH_TEMPLATE_A = null;
+let FISH_TEMPLATE_B = null;
+
+function createFishPath(cx, cz, rx, rz, baseY, style = 'circle') {
+  const pts = [];
+  const N = 12;
+  for (let i = 0; i < N; i++) {
+    const a = (i / N) * Math.PI * 2;
+    let x, y, z;
+    if (style === 'figure8') {
+      x = cx + Math.sin(a) * rx;
+      z = cz + Math.sin(a * 2) * rz * 0.5;
+      y = baseY + Math.cos(a * 2) * 0.4;
+    } else if (style === 'vertical') {
+      x = cx + Math.cos(a) * rx * 0.6;
+      z = cz + Math.sin(a) * rz * 0.6;
+      y = baseY + Math.sin(a) * 1.8;
+    } else if (style === 'drift') {
+      x = cx + Math.cos(a) * rx + Math.sin(a * 3) * rx * 0.3;
+      z = cz + Math.sin(a) * rz + Math.cos(a * 2) * rz * 0.2;
+      y = baseY + Math.sin(a * 1.5) * 0.6;
+    } else {
+      x = cx + Math.cos(a) * rx;
+      z = cz + Math.sin(a) * rz;
+      y = baseY + Math.sin(a * 2) * 0.25;
+    }
+    x += (Math.random() - 0.5) * 0.5;
+    z += (Math.random() - 0.5) * 0.5;
+    y += (Math.random() - 0.5) * 0.15;
+    pts.push(new THREE.Vector3(x, y, z));
+  }
+  return new THREE.CatmullRomCurve3(pts, true, 'centripetal', 0.5);
+}
+
+const CLOWNFISH_MAT = new THREE.MeshPhongMaterial({
+  color: 0xFF6A00, shininess: 60, specular: new THREE.Color(0x444444),
+});
+
+let _clownfishTex = null;
+function getClownfishTexture() {
+  if (_clownfishTex) return _clownfishTex;
+  const W = 512, H = 256;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+
+  // golden-amber base (紅海雙帶小丑魚)
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#E89500');
+  bg.addColorStop(0.25, '#FFAA00');
+  bg.addColorStop(0.5, '#FFB820');
+  bg.addColorStop(0.75, '#FFAA00');
+  bg.addColorStop(1, '#D08800');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // subtle warm shading on belly
+  const belly = ctx.createLinearGradient(0, H * 0.6, 0, H);
+  belly.addColorStop(0, 'rgba(255,200,50,0)');
+  belly.addColorStop(1, 'rgba(255,210,60,0.3)');
+  ctx.fillStyle = belly;
+  ctx.fillRect(0, 0, W, H);
+
+  // 2 white stripes with thin dark borders (雙帶)
+  const stripes = [
+    { x: 100, w: 32 },  // head stripe (behind eye)
+    { x: 280, w: 28 },  // mid-body stripe
+  ];
+  for (const s of stripes) {
+    ctx.fillStyle = '#222';
+    ctx.beginPath();
+    ctx.ellipse(s.x, H / 2, s.w / 2 + 4, H / 2 + 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#F0F5FF';
+    ctx.beginPath();
+    ctx.ellipse(s.x, H / 2, s.w / 2, H / 2 - 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // yellow fin edges (top/bottom)
+  const finTop = ctx.createLinearGradient(0, 0, 0, 22);
+  finTop.addColorStop(0, '#E8D040');
+  finTop.addColorStop(1, 'rgba(232,208,64,0)');
+  ctx.fillStyle = finTop;
+  ctx.fillRect(0, 0, W, 22);
+  const finBot = ctx.createLinearGradient(0, H - 22, 0, H);
+  finBot.addColorStop(0, 'rgba(232,208,64,0)');
+  finBot.addColorStop(1, '#E8D040');
+  ctx.fillStyle = finBot;
+  ctx.fillRect(0, H - 22, W, 22);
+
+  // yellow tail glow
+  const tailG = ctx.createLinearGradient(W - 80, 0, W, 0);
+  tailG.addColorStop(0, 'rgba(230,210,50,0)');
+  tailG.addColorStop(1, 'rgba(230,210,50,0.45)');
+  ctx.fillStyle = tailG;
+  ctx.fillRect(W - 80, 0, 80, H);
+
+  // nose area slightly darker
+  const noseG = ctx.createLinearGradient(0, 0, 40, 0);
+  noseG.addColorStop(0, 'rgba(180,120,0,0.3)');
+  noseG.addColorStop(1, 'rgba(180,120,0,0)');
+  ctx.fillStyle = noseG;
+  ctx.fillRect(0, 0, 40, H);
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  _clownfishTex = tex;
+  return tex;
+}
+
+function fixMat(mat) {
+  if (!mat) return;
+  mat.side = THREE.DoubleSide;
+  if (!mat.map && mat.color) {
+    const c = mat.color;
+    if (c.r > 0.85 && c.g > 0.85 && c.b > 0.85) {
+      mat.map = getClownfishTexture();
+      mat.color.setRGB(1, 1, 1);
+      mat.needsUpdate = true;
+    }
+  }
+}
+
+function spawnFish(scene, template, cfg, index) {
+  const container = new THREE.Group();
+  const fish = template.clone();
+  fish.scale.setScalar(cfg.sz);
+  fish.traverse(child => {
+    if (child.isMesh) {
+      if (Array.isArray(child.material)) {
+        child.material = child.material.map(m => {
+          if (m && m.clone) { const c2 = m.clone(); fixMat(c2); return c2; }
+          return CLOWNFISH_MAT.clone();
+        });
+      } else if (child.material && child.material.clone) {
+        child.material = child.material.clone();
+        fixMat(child.material);
+      } else {
+        child.material = CLOWNFISH_MAT.clone();
+      }
+    }
+  });
+  container.add(fish);
+  scene.add(container);
+
+  let mixer = null;
+  if (template.animations && template.animations.length > 0) {
+    mixer = new THREE.AnimationMixer(fish);
+    const clip = template.animations[0];
+    const action = mixer.clipAction(clip);
+    action.play();
+    FISH_MIXERS.push(mixer);
+  }
+
+  const path = createFishPath(cfg.cx, cfg.cz, cfg.rx, cfg.rz, cfg.y, cfg.style || 'circle');
+  CLOWNFISH.push({
+    mesh: container,
+    fish,
+    path,
+    t: index * 0.2,
+    speed: cfg.sp,
+    phase: index * 1.3,
+    mixer,
+    yRot: cfg.yRot || 0,
+    type: cfg.type || 'A',
+  });
+}
+
+function setFishVisibility(type, visible) {
+  for (const f of CLOWNFISH) {
+    if (f.type === type) f.mesh.visible = visible;
+  }
+}
+
+async function initClownfish(scene, bounds) {
+  const [cx, , cz] = bounds.robust_center;
+  const [ex, , ez] = bounds.robust_extent;
+  const topY = bounds.robust_min[1];
+  console.log('[fish] scene center:', cx, cz, 'topY:', topY, 'extent:', ex, ez);
+
+  scene.add(new THREE.AmbientLight(0x88bbdd, 0.8));
+  const sun = new THREE.DirectionalLight(0xffeedd, 1.2);
+  sun.position.set(cx, topY - 15, cz);
+  scene.add(sun);
+
+  const loader = new FBXLoader();
+  const loadFBX = url => new Promise((res, rej) => {
+    loader.load(url, obj => {
+      console.log('[fish] loaded', url);
+      const box = new THREE.Box3().setFromObject(obj);
+      const size = new THREE.Vector3();
+      box.getSize(size);
+      console.log('[fish]', url, 'native size:', size.x.toFixed(1), size.y.toFixed(1), size.z.toFixed(1));
+      res(obj);
+    }, undefined, err => {
+      console.error('[fish] load error', url, err);
+      rej(err);
+    });
+  });
+
+  try {
+    const [modelA, modelB] = await Promise.all([
+      loadFBX('./assets/3d-model.fbx'),
+      loadFBX('./assets/pez3.fbx'),
+    ]);
+    FISH_TEMPLATE_A = modelA;
+    FISH_TEMPLATE_B = modelB;
+
+    const boxA = new THREE.Box3().setFromObject(modelA);
+    const sA = new THREE.Vector3(); boxA.getSize(sA);
+    const boxB = new THREE.Box3().setFromObject(modelB);
+    const sB = new THREE.Vector3(); boxB.getSize(sB);
+    const targetLen = 0.6;
+    const scaleA = targetLen / Math.max(sA.x, sA.y, sA.z);
+    const scaleB = targetLen / Math.max(sB.x, sB.y, sB.z);
+    const rotA = -Math.PI / 2;
+    const rotB = Math.PI / 2;
+
+    const botY = bounds.robust_max[1];
+    const midY = (topY + botY) / 2;
+    const spanY = botY - topY;
+
+    const cfgs = [
+      // A fish — spread across entire coral, varied paths
+      { sz: scaleA * 1.0,  sp: 0.030, rx: ex*0.60, rz: ez*0.60, y: topY - 0.5,           cx, cz, yRot: rotA, type: 'A', style: 'circle' },
+      { sz: scaleA * 0.85, sp: 0.038, rx: ex*0.45, rz: ez*0.50, y: topY + spanY * 0.15,   cx, cz, yRot: rotA, type: 'A', style: 'figure8' },
+      { sz: scaleA * 0.95, sp: 0.025, rx: ex*0.75, rz: ez*0.70, y: topY + spanY * 0.3,    cx, cz, yRot: rotA, type: 'A', style: 'drift' },
+      { sz: scaleA * 0.80, sp: 0.042, rx: ex*0.35, rz: ez*0.35, y: midY,                  cx, cz, yRot: rotA, type: 'A', style: 'circle' },
+      { sz: scaleA * 0.90, sp: 0.033, rx: ex*0.55, rz: ez*0.45, y: midY + spanY * 0.15,   cx, cz, yRot: rotA, type: 'A', style: 'vertical' },
+      { sz: scaleA * 0.75, sp: 0.048, rx: ex*0.30, rz: ez*0.40, y: topY + spanY * 0.1,    cx, cz, yRot: rotA, type: 'A', style: 'figure8' },
+      { sz: scaleA * 1.05, sp: 0.022, rx: ex*0.80, rz: ez*0.75, y: topY + spanY * 0.45,   cx, cz, yRot: rotA, type: 'A', style: 'drift' },
+      { sz: scaleA * 0.70, sp: 0.050, rx: ex*0.40, rz: ez*0.30, y: botY - spanY * 0.15,   cx, cz, yRot: rotA, type: 'A', style: 'circle' },
+      { sz: scaleA * 0.88, sp: 0.035, rx: ex*0.50, rz: ez*0.55, y: botY - spanY * 0.3,    cx, cz, yRot: rotA, type: 'A', style: 'vertical' },
+      // B fish — fewer, scattered
+      { sz: scaleB * 0.85, sp: 0.040, rx: ex*0.45, rz: ez*0.45, y: topY + spanY * 0.2,    cx, cz, yRot: rotB, type: 'B', style: 'drift' },
+      { sz: scaleB * 0.75, sp: 0.045, rx: ex*0.35, rz: ez*0.50, y: midY + spanY * 0.1,    cx, cz, yRot: rotB, type: 'B', style: 'figure8' },
+      { sz: scaleB * 0.90, sp: 0.032, rx: ex*0.55, rz: ez*0.40, y: botY - spanY * 0.25,   cx, cz, yRot: rotB, type: 'B', style: 'circle' },
+    ];
+    cfgs.forEach((c, i) => {
+      const tpl = c.type === 'A' ? FISH_TEMPLATE_A : FISH_TEMPLATE_B;
+      spawnFish(scene, tpl, c, i);
+    });
+    console.log('[fish] spawned', CLOWNFISH.length, 'clownfish');
+  } catch (err) {
+    console.error('[fish] FBX load failed, skipping clownfish:', err);
+  }
+}
+
+const _fishRight = new THREE.Vector3();
+const _fishUp    = new THREE.Vector3();
+const _fishFwd   = new THREE.Vector3();
+const _fishMat4  = new THREE.Matrix4();
+const _worldUp   = new THREE.Vector3(0, -1, 0);
+const _yRotQ     = new THREE.Quaternion();
+
+function updateClownfish(dt) {
+  for (const f of CLOWNFISH) {
+    f.t = (f.t + f.speed * dt) % 1;
+    f.phase += dt * 4.5;
+    if (f.mixer) f.mixer.update(dt);
+
+    const pos = f.path.getPointAt(f.t);
+    f.mesh.position.copy(pos);
+    f.mesh.position.y += Math.sin(f.phase * 0.8) * 0.03;
+
+    _fishFwd.copy(f.path.getTangentAt(f.t)).normalize();
+    _fishRight.crossVectors(_worldUp, _fishFwd).normalize();
+    _fishUp.crossVectors(_fishFwd, _fishRight).normalize();
+    _fishMat4.makeBasis(_fishRight, _fishUp, _fishFwd);
+    f.mesh.quaternion.setFromRotationMatrix(_fishMat4);
+    _yRotQ.setFromAxisAngle(_fishUp, f.yRot + Math.sin(f.phase * 1.8) * 0.06);
+    f.mesh.quaternion.multiply(_yRotQ);
+  }
+}
+
+async function init3D() {
+  const canvas = document.getElementById('viewer-canvas');
+  const root   = document.getElementById('viewer-root');
+  const loading = document.getElementById('loading');
+  const errBox = document.getElementById('viewer-error');
+  const errMsg = document.getElementById('viewer-error-msg');
+  try {
+    const b = computeSceneBounds();
+    const [cx, cy, cz] = b.center;
+    const radius = Math.max(...b.extent) * 0.8 + 2;
+
+    // 標準 Three.js + Spark.js 流程（取代 mkkellogg Viewer）
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    const setRendererSize = () => {
+      const w = root.clientWidth, h = root.clientHeight;
+      renderer.setSize(w, h, false);
+    };
+    setRendererSize();
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, root.clientWidth / root.clientHeight, 0.01, 1000);
+    // Brush PLY/SOG 視覺上方 = -Y (COLMAP/INRIA 慣例)，所以設 camera.up=[0,-1,0]
+    // 而非旋轉 splat mesh — 保持 splat world 座標跟 colonies.json bbox 對位
+    camera.up.set(0, -1, 0);
+    camera.position.set(cx + radius, cy - radius * 0.7, cz + radius);
+
+    const controls = new OrbitControls(camera, canvas);
+    controls.target.set(cx, cy, cz);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.update();
+
+    // Spark renderer (掛入 scene, 自己管 splat 排序與渲染)
+    const spark = new SparkRenderer({ renderer });
+    scene.add(spark);
+
+    // 第一個 SplatMesh 載入
+    // 注意: splat-transform 輸出的 .sog 實際是 ZIP 容器 (PK magic)，
+    // Spark 內部識別為 PCSOGSZIP；副檔名 .sog 沒登錄在 file-ext 映射，
+    // 必須顯式 fileType。raycastable: true 啟用原生 raycaster.intersectObject。
+    const initialUrl = './assets/' + STATE.currentPly;
+    const splat = new SplatMesh({
+      url: initialUrl,
+      fileType: SplatFileType.PCSOGSZIP,
+      raycastable: true,
+      minRaycastOpacity: 0.05,
+    });
+    scene.add(splat);
+
+    // 等 splat 載完 — Spark 用 .initialized Promise，沒有 'load' DOM event
+    try {
+      await Promise.race([
+        splat.initialized,
+        new Promise((_, rej) => setTimeout(() => rej(new Error('splat load timeout 90s')), 90000)),
+      ]);
+      console.log('[init] splat loaded');
+    } catch (e) {
+      console.error('[init] splat load failed:', e);
+    }
+
+    STATE.viewer = { scene, camera, renderer, controls, spark, splat };
+
+    // 載完 fit 一次（用實際載入的 mesh 範圍），並快照初始位置（給 Reset view 用）
+    fitCameraToScene(STATE.viewer);
+    STATE.initialCameraPos = camera.position.clone();
+    STATE.initialCameraTgt = controls.target.clone();
+    console.log('[init] initial camera snapshot saved');
+
+    // 顯示 splat 數量
+    const n = splat.numSplats ?? splat.packedSplats?.numSplats ?? null;
+    document.getElementById('splat-count').textContent = n ? n.toLocaleString() : '—';
+
+    // Bbox overlay
+    buildBboxOverlay(scene);
+
+    // Clownfish
+    {
+      const sogKey = STATE.currentPly;
+      const plyKey = sogKey.replace(/\.sog$/, '.ply');
+      const sb = STATE.sceneBounds && (STATE.sceneBounds[sogKey] || STATE.sceneBounds[plyKey]);
+      if (sb && sb.robust_center) await initClownfish(scene, sb);
+    }
+
+    // Mode buttons
+    document.querySelectorAll('.mode-btn').forEach(b => {
+      b.addEventListener('click', () => setMode(b.dataset.mode));
+    });
+
+    // Reset view 按鈕
+    const resetBtn = document.getElementById('reset-view');
+    if (resetBtn) resetBtn.addEventListener('click', () => resetView());
+
+    // Debug bbox 勾選
+    const dbgChk = document.getElementById('debug-bbox');
+    if (dbgChk) {
+      dbgChk.addEventListener('change', () => {
+        STATE.debugBbox = dbgChk.checked;
+        const total = STATE.bboxItems ? STATE.bboxItems.length : 0;
+        console.log('[debug-bbox] toggled =', dbgChk.checked, ' (', total, 'helpers total)');
+        setBboxHighlight(STATE.selectedColonyId);
+        if (STATE.bboxItems) {
+          const visN = STATE.bboxItems.filter(it => it.helper.visible).length;
+          console.log('[debug-bbox] now visible:', visN);
+        }
+      });
+      console.log('[init] debug-bbox checkbox bound');
+    }
+
+    // Fish toggles
+    const fishA = document.getElementById('fish-toggle-a');
+    const fishB = document.getElementById('fish-toggle-b');
+    if (fishA) fishA.addEventListener('change', () => setFishVisibility('A', fishA.checked));
+    if (fishB) fishB.addEventListener('change', () => setFishVisibility('B', fishB.checked));
+
+    // Picking listeners
+    installPickListeners();
+
+    // ---- Hover highlight (Route A: SDF-box clipped instance overlay) ----
+    STATE.isWeakDevice = detectWeakDevice();
+    console.log('[hover] isWeakDevice =', STATE.isWeakDevice);
+    buildHoverEdit();
+    // 注意: 不能 scene.add(edit) — Spark 會把 scene 內所有 SplatEdit 當 globalEdits
+    // 套到「每一個」SplatMesh 上 (包括 coral_main)，導致 box 外的礁石全被清空。
+    // 改成: SDF + Edit 在 instanceMesh ready 後 add 到 instanceMesh 之下，限制 scope。
+    // 詳見 lazyLoadInstanceMesh() 中的 attach 步驟。
+
+    // pointerenter: 第一次滑鼠進入 canvas 才 lazy-load instances mesh
+    canvas.addEventListener('pointerenter', () => {
+      lazyLoadInstanceMesh();
+    }, { once: false });
+    canvas.addEventListener('pointermove', onPointerMove);
+    canvas.addEventListener('pointerleave', () => {
+      _pendingHover = null;
+      setHoveredColony(null);
+    });
+
+    // Colony panel button
+    document.getElementById('cd-clear').addEventListener('click', () => resetView());
+
+    // 鍵盤快捷鍵
+    window.addEventListener('keydown', e => {
+      if (e.key === 'f' || e.key === 'F') fitCameraToScene(STATE.viewer);
+      if (e.key === 'r' || e.key === 'R') resetView();
+      if (e.key === 'Escape') clearColony();
+    });
+
+    // Render loop (Spark 已掛 scene 內，自己處理 splat 排序與繪製；我們只跑 standard three render)
+    let resizeQueued = false;
+    const onResize = () => {
+      if (resizeQueued) return;
+      resizeQueued = true;
+      requestAnimationFrame(() => {
+        resizeQueued = false;
+        setRendererSize();
+        camera.aspect = root.clientWidth / root.clientHeight;
+        camera.updateProjectionMatrix();
+      });
+    };
+    window.addEventListener('resize', onResize);
+    new ResizeObserver(onResize).observe(root);
+
+    // FPS 量測 (每秒採樣)
+    let fpsFrames = 0, fpsLast = performance.now();
+    const fpsReadout = document.getElementById('fps-readout');
+
+    let lastFrameTime = performance.now();
+    renderer.setAnimationLoop(() => {
+      const frameNow = performance.now();
+      const dt = Math.min((frameNow - lastFrameTime) / 1000, 0.1);
+      lastFrameTime = frameNow;
+      processPendingHover();
+      updateClownfish(dt);
+      controls.update();
+      renderer.render(scene, camera);
+      fpsFrames++;
+      if (frameNow - fpsLast >= 1000) {
+        const fps = Math.round(fpsFrames * 1000 / (frameNow - fpsLast));
+        STATE.fps = fps;
+        if (fpsReadout) fpsReadout.textContent = String(fps);
+        fpsFrames = 0; fpsLast = frameNow;
+      }
+    });
+
+    loading.classList.add('hidden');
+  } catch (err) {
+    console.error(err);
+    errMsg.textContent = (err && err.message) ? err.message : String(err);
+    loading.classList.add('hidden');
+    errBox.classList.remove('hidden');
+  }
+}
+
+// =========================================
+//  Boot
+// =========================================
+const APP_VERSION = 'v0.6.1-2026-05-19-hover-instance-scoped';
+console.log('%c[boot] Digital Twin ' + APP_VERSION, 'color:#fb923c;font-weight:bold');
+
+async function main() {
+  // env data
+  const er = await fetch('environment_data.json');
+  STATE.envData = await er.json();
+  const c = STATE.envData.current;
+  STATE.current = { sst: c.sst, ph: c.ph, sal: c.sal, do: c.do };
+  ['sst','ph','sal','do'].forEach(k => setReading(k, c[k]));
+
+
+  // colony meta
+  const cr = await fetch('./assets/colonies.json');
+  STATE.colonies = await cr.json();
+  document.getElementById('colony-count').textContent = STATE.colonies.n_colonies;
+
+  // scene bounds sidecar (per-PLY real bbox)
+  try {
+    const sr = await fetch('./assets/scene_bounds.json');
+    STATE.sceneBounds = await sr.json();
+  } catch { STATE.sceneBounds = null; }
+
+  // charts
+  STATE.charts.sst = buildMiniChart('chart-sst', 'sst', '#f87171', { min: 25, max: 30 });
+  STATE.charts.ph  = buildMiniChart('chart-ph',  'ph',  '#60a5fa', { min: 7.9, max: 8.3 });
+  STATE.charts.sal = buildMiniChart('chart-sal', 'sal', '#34d399', { min: 33.5, max: 36 });
+  STATE.charts.do  = buildMiniChart('chart-do',  'do',  '#fbbf24', { min: 5, max: 8 });
+  refreshCharts();
+
+  document.querySelectorAll('.seg-btn[data-range]').forEach(b => b.addEventListener('click', () => setRange(b.dataset.range)));
+
+  // live update
+  setInterval(tick, 30000);
+
+  // 3D
+  init3D();
+
+  // expose for devtools / playwright probing
+  window.STATE = STATE;
+}
+main().catch(e => {
+  console.error(e);
+  document.body.innerHTML = '<pre style="color:#fca5a5;padding:20px;font-family:Inter">'+e+'</pre>';
+});
+</script>
+</body>
+</html>
