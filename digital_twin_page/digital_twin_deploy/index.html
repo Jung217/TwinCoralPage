@@ -53,6 +53,53 @@
     color: #94a3b8; background:#f8fafc; border:1px solid #e2e8f0;
     padding: 2px 6px; border-radius: 4px;
   }
+  /* ── Character system ── */
+  #character-container {
+    position: absolute; bottom: 12px; right: 12px; z-index: 15;
+    width: 180px; pointer-events: auto;
+    transition: opacity .4s ease;
+  }
+  #character-container.hidden { opacity: 0; pointer-events: none; }
+  .char-img-wrap {
+    position: relative; width: 180px; height: 260px; overflow: hidden;
+    border-radius: 12px;
+    animation: charFloat 4s ease-in-out infinite;
+  }
+  .char-img-wrap img {
+    width: 100%; height: 100%; object-fit: cover; object-position: top center;
+    filter: drop-shadow(0 2px 12px rgba(0,0,0,.35));
+    animation: charBreathe 3.5s ease-in-out infinite;
+    transition: opacity .35s ease;
+  }
+  @keyframes charFloat {
+    0%,100% { transform: translateY(0); }
+    50%     { transform: translateY(-6px); }
+  }
+  @keyframes charBreathe {
+    0%,100% { transform: scale(1); }
+    50%     { transform: scale(1.012); }
+  }
+  .char-dialogue {
+    margin-top: 6px; padding: 8px 10px;
+    background: rgba(15,23,42,.88); backdrop-filter: blur(6px);
+    border: 1px solid rgba(251,146,60,.25); border-radius: 10px;
+    font-size: 12px; line-height: 1.5; color: #e2e8f0;
+    min-height: 42px; max-height: 110px; overflow-y: auto;
+    box-shadow: 0 2px 10px rgba(0,0,0,.2);
+  }
+  .char-dialogue .char-name {
+    font-size: 10px; font-weight: 600; color: #fb923c;
+    margin-bottom: 2px; letter-spacing: .03em;
+  }
+  .char-dialogue .char-text { min-height: 1.5em; }
+  .char-toggle {
+    position: absolute; top: -8px; right: -8px; z-index: 16;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: rgba(15,23,42,.85); border: 1px solid #334155;
+    color: #94a3b8; font-size: 12px; line-height: 20px; text-align: center;
+    cursor: pointer; transition: color .15s;
+  }
+  .char-toggle:hover { color: #f1f5f9; }
   .pulse-dot { animation: pulse 2s ease-in-out infinite; }
   @keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
   .seg-btn { transition: all .15s ease; }
@@ -189,6 +236,24 @@
           </div>
         </details>
       </div>
+      <!-- Character guide overlay -->
+      <div class="viewer-overlay absolute bottom-3 right-3 z-15">
+        <div id="character-container">
+          <button class="char-toggle" id="char-close" title="隱藏導覽員">×</button>
+          <div class="char-img-wrap">
+            <img id="char-img" src="./assets/characters/coral-chan.png" alt="珊瑚娘" />
+          </div>
+          <div class="char-dialogue">
+            <div class="char-name" id="char-name">珊瑚娘 Coral-chan</div>
+            <div class="char-text" id="char-text"></div>
+          </div>
+        </div>
+        <button id="char-show" class="hidden" title="顯示導覽員"
+          style="width:36px;height:36px;border-radius:50%;background:rgba(15,23,42,.8);backdrop-filter:blur(4px);border:1px solid rgba(251,146,60,.35);color:#fb923c;font-size:18px;cursor:pointer;display:grid;place-items:center;margin-left:auto;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </button>
+      </div>
+
       <!-- Loading overlay -->
       <div id="loading" class="viewer-overlay absolute inset-0 z-20 grid place-items-center bg-ink-950/85">
         <div class="text-center">
@@ -494,7 +559,7 @@ function setRange(r) {
 }
 
 // =========================================
-//  Readings + live tick
+//  Readings + live data (SSE)
 // =========================================
 function setReading(key, val) {
   STATE.current[key] = val;
@@ -509,7 +574,150 @@ function tick() {
   setReading('ph',  clamp(c.ph  + jitter(0.02), 7.9, 8.3));
   setReading('sal', clamp(c.sal + jitter(0.05), 34, 36));
   setReading('do',  clamp(c.do  + jitter(0.1), 5, 8));
+}
 
+
+// =========================================
+//  Character guide system
+// =========================================
+const CHAR_DATA = {
+  name: '珊瑚娘 Coral-chan',
+  img: './assets/characters/coral-chan.png',
+  greeting: '歡迎來到珊瑚礁數位孿生平台！點擊 3D 模型上的珊瑚群落，我會為你介紹～',
+  info: [
+    '這個平台用高斯潑濺技術重建了真實珊瑚礁的 3D 模型喔！',
+    '目前場景中有 38 個珊瑚群落，來自實地調查資料（T0: 2026-05）。',
+    '試試旋轉視角，或是點擊任何一個珊瑚群落來了解更多！',
+  ],
+  alert_hot: '水溫偏高了…超過 29°C 珊瑚可能會白化，好擔心…',
+  healthy: '水質看起來很穩定，珊瑚們都很健康的樣子！',
+};
+
+const GENUS_LINES = {
+  Acropora: [
+    '你找到軸孔珊瑚了！牠們是珊瑚礁的建築師～',
+    '軸孔珊瑚是造礁珊瑚中種類最多的屬，全世界有超過 150 種！',
+    '牠的分枝結構可以為很多小魚小蝦提供庇護所喔。',
+    '不過軸孔珊瑚對水質變化很敏感…水溫一高就容易白化 QQ',
+    '在這個礁區，軸孔珊瑚有 14 個群落，是數量最多的！',
+  ],
+  Pocillopora: [
+    '這是鹿角珊瑚！比軸孔珊瑚耐操一點～',
+    '鹿角珊瑚的表面有很多小突起，像鹿角上的疣狀物。',
+    '牠算是 SPS 裡比較強健的，新手養海水缸常從牠開始！',
+    '鹿角珊瑚跟蟲黃藻是好朋友，蟲黃藻住在牠體內幫忙行光合作用。',
+  ],
+  Pavona: [
+    '你點到雀屏珊瑚了～像孔雀開屏一樣展開！',
+    '雀屏珊瑚的外型像薄薄的葉片或扇子。',
+    '牠既有 SPS 的骨骼，又有接近 LPS 的耐受度，算是跨界選手！',
+    '在光線不太強的地方也能生長，很隨和的～',
+  ],
+  Favites: [
+    '這是菊珊瑚，腦珊瑚家族的成員！',
+    '菊珊瑚的表面有很多六角形的杯狀結構，像蜂巢一樣。',
+    '牠是 LPS 珊瑚，比 SPS 好養，對水質變化的耐受度更高。',
+    '晚上牠會伸出觸手捕食浮游生物，白天就收起來曬太陽。',
+  ],
+  Euphyllia: [
+    '你找到真葉珊瑚了！花瓶珊瑚和火炬珊瑚都是牠的親戚！',
+    '真葉珊瑚有長長的觸手，在水流中飄動很好看！',
+    '牠是 LPS 裡最受歡迎的觀賞珊瑚之一，顏色有很多變化。',
+    '小心不要把其他珊瑚放太近，牠的觸手可以伸到 15 公分遠喔！',
+    '在這個礁區真葉珊瑚有 10 個群落，是第二多的！',
+  ],
+  Stylophora: [
+    '這是柱珊瑚，入門級 SPS 就是牠！',
+    '柱珊瑚的外型是粗短的分枝，比軸孔珊瑚更結實。',
+    '很多人養海水缸第一顆 SPS 就選牠，因為比較好養。',
+    '牠在這個礁區有 4 個群落，分佈還算均勻。',
+  ],
+  Montipora: [
+    '你點到表孔珊瑚了～有皮殼型也有板片型喔！',
+    '表孔珊瑚的形態非常多樣，可以是片狀、枝狀或覆蓋狀。',
+    '牠是 SPS 裡第二大的屬，僅次於軸孔珊瑚。',
+    '牠的表面有很多微小的孔洞，這就是「表孔」名字的由來。',
+  ],
+  Fungia: [
+    '這是蕈珊瑚，大家都叫牠飛碟珊瑚～',
+    '蕈珊瑚跟其他珊瑚不一樣，牠是單體自由生活的，不固定在石頭上！',
+    '牠長得像香菇或飛碟，是最好養的珊瑚之一。',
+    '成年後牠會從基座脫落，可以在海底慢慢移動喔～',
+  ],
+};
+
+let charTypingTimer = null;
+let charVisible = localStorage.getItem('charVisible') !== 'false';
+let charCurrentGenus = null;
+
+function typeText(el, text, speed = 35) {
+  if (charTypingTimer) { clearInterval(charTypingTimer); charTypingTimer = null; }
+  el.textContent = '';
+  let i = 0;
+  charTypingTimer = setInterval(() => {
+    if (i < text.length) { el.textContent += text[i]; i++; }
+    else { clearInterval(charTypingTimer); charTypingTimer = null; }
+  }, speed);
+}
+
+function showCharacter(genus) {
+  const container = document.getElementById('character-container');
+  const nameEl = document.getElementById('char-name');
+  const textEl = document.getElementById('char-text');
+  if (!container) return;
+
+  charCurrentGenus = genus;
+  nameEl.textContent = CHAR_DATA.name;
+
+  let text;
+  if (genus === 'coral-chan') {
+    const pool = [CHAR_DATA.greeting, ...CHAR_DATA.info];
+    text = pool[Math.floor(Math.random() * pool.length)];
+  } else {
+    const lines = GENUS_LINES[genus];
+    if (lines && lines.length) {
+      text = lines[Math.floor(Math.random() * lines.length)];
+    } else {
+      const zh = CLASS_ZH[genus];
+      text = zh ? `你點到了${zh}（${genus}）的群落！` : CHAR_DATA.greeting;
+    }
+  }
+  typeText(textEl, text);
+
+  container.classList.remove('hidden');
+  const showBtn = document.getElementById('char-show');
+  if (showBtn) showBtn.classList.add('hidden');
+}
+
+function hideCharacter() {
+  const container = document.getElementById('character-container');
+  const showBtn = document.getElementById('char-show');
+  if (container) container.classList.add('hidden');
+  if (showBtn) showBtn.classList.remove('hidden');
+}
+
+function initCharacterSystem() {
+  const closeBtn = document.getElementById('char-close');
+  const showBtn = document.getElementById('char-show');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      charVisible = false;
+      localStorage.setItem('charVisible', 'false');
+      hideCharacter();
+    });
+  }
+  if (showBtn) {
+    showBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      charVisible = true;
+      localStorage.setItem('charVisible', 'true');
+      showBtn.classList.add('hidden');
+      showCharacter(charCurrentGenus || 'coral-chan');
+    });
+  }
+  if (charVisible) showCharacter('coral-chan');
+  else hideCharacter();
 }
 
 // =========================================
@@ -864,6 +1072,7 @@ function showColony(c) {
   document.getElementById('cd-branch').textContent = (c.branchiness   || 0).toFixed(2);
   document.getElementById('cd-bleach').textContent = (c.bleaching_proxy || 0).toFixed(2);
   document.getElementById('cd-swatch').style.background = rgbToCss(c.mean_rgb || [0.5,0.5,0.5]);
+  if (charVisible) showCharacter(c.class_name);
 }
 
 function clearColony() {
@@ -871,6 +1080,7 @@ function clearColony() {
   setBboxHighlight(null);
   document.getElementById('colony-empty').classList.remove('hidden');
   document.getElementById('colony-detail').classList.add('hidden');
+  if (charVisible) showCharacter('coral-chan');
 }
 
 // =========================================
@@ -1584,8 +1794,10 @@ async function main() {
 
   document.querySelectorAll('.seg-btn[data-range]').forEach(b => b.addEventListener('click', () => setRange(b.dataset.range)));
 
-  // live update
   setInterval(tick, 30000);
+
+  // Character guide
+  initCharacterSystem();
 
   // 3D
   init3D();

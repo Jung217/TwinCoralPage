@@ -2,7 +2,6 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const url = require('url');
 
 const PORT = parseInt(process.argv[2] || '8000', 10);
 const ROOT = __dirname;
@@ -29,12 +28,16 @@ const MIME = {
   '.wasm': 'application/wasm',
   '.woff': 'font/woff',
   '.woff2':'font/woff2',
+  '.fbx':  'application/octet-stream',
+  '.zip':  'application/zip',
 };
 
 const server = http.createServer((req, res) => {
   let pathname;
-  try { pathname = decodeURIComponent(url.parse(req.url).pathname); }
-  catch { res.writeHead(400); return res.end('Bad Request'); }
+  try {
+    const u = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+    pathname = decodeURIComponent(u.pathname);
+  } catch { res.writeHead(400); return res.end('Bad Request'); }
 
   if (pathname.endsWith('/')) pathname += 'index.html';
 
@@ -61,5 +64,5 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`Threading server on http://localhost:${PORT}/`);
+  console.log(`Server on http://localhost:${PORT}/`);
 });
