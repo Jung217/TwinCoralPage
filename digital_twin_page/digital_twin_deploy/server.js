@@ -28,7 +28,10 @@ const MIME = {
   '.wasm': 'application/wasm',
   '.woff': 'font/woff',
   '.woff2':'font/woff2',
+  '.glb':  'model/gltf-binary',
+  '.gltf': 'model/gltf+json',
   '.fbx':  'application/octet-stream',
+  '.moc3': 'application/octet-stream',
   '.zip':  'application/zip',
 };
 

@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <title>珊瑚礁數位孿生平台 [展示資料]</title>
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<link rel="icon" type="image/png" href="cihci.png" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🪸</text></svg>" />
 <meta http-equiv="cache-control" content="no-store, no-cache, must-revalidate, max-age=0" />
 <meta http-equiv="pragma" content="no-cache" />
 <meta http-equiv="expires" content="0" />
@@ -14,6 +14,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/oh-my-live2d@0.19.3/dist/index.min.js"></script>
 <script type="importmap">
 {
   "imports": {
@@ -163,13 +164,28 @@
   <!-- Header -->
   <header class="px-5 py-3 border-b border-ink-800/80 flex items-center gap-4 shrink-0">
     <div class="flex items-center gap-3">
-      <img src="cihci.png" alt="CIHCI Lab" class="w-9 h-9 rounded-lg object-contain" />
+      <span role="img" aria-label="珊瑚礁數位孿生平台" class="w-9 h-9 rounded-lg flex items-center justify-center text-[26px] leading-none select-none">🪸</span>
       <div>
         <div class="text-[15px] font-semibold tracking-tight">珊瑚礁數位孿生平台 <span class="badge-demo align-middle ml-1">展示資料</span></div>
         <div class="text-[11px] text-fog-500">概念展示</div>
       </div>
     </div>
-    <div class="ml-auto flex items-center gap-4 text-[12px] text-fog-400">
+    <div class="ml-auto flex items-center gap-2 text-[12px] text-fog-400">
+      <a href="growth_simulator.html"
+         class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-coral-500/15 border border-coral-500/40 text-coral-300 hover:bg-coral-500/25 hover:text-coral-200 transition-colors font-medium">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+        成長情境模擬
+      </a>
+      <a href="environment.html"
+         class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ink-900/80 border border-ink-800 text-fog-400 hover:text-fog-200 hover:border-ink-700 transition-colors">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
+        環境監測
+      </a>
+      <a href="vis_labels/index_train.html"
+         class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ink-900/80 border border-ink-800 text-fog-400 hover:text-fog-200 hover:border-ink-700 transition-colors">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18"/></svg>
+        資料集標註
+      </a>
     </div>
   </header>
 
@@ -184,24 +200,50 @@
         <div class="flex bg-ink-900/85 backdrop-blur border border-ink-800 rounded-lg p-0.5 text-[12px] text-fog-400">
           <button data-mode="natural"   class="mode-btn seg-btn active px-3 py-1 rounded-md">自然色</button>
           <button data-mode="instances" class="mode-btn seg-btn px-3 py-1 rounded-md">群落染色</button>
+          <button data-mode="mesh"      class="mode-btn seg-btn px-3 py-1 rounded-md">Mesh</button>
+          <button data-mode="meshInst"  class="mode-btn seg-btn px-3 py-1 rounded-md">Mesh 群落</button>
         </div>
         <button id="reset-view" title="重設視角 (R)"
           class="flex items-center gap-1.5 text-[11px] text-fog-300 bg-ink-900/85 backdrop-blur border border-ink-800 hover:border-coral-500/50 hover:text-fog-100 rounded-lg px-2.5 py-1">
           <svg class="ico" style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
           <span>重設視角</span>
         </button>
-        <label class="flex items-center gap-1.5 text-[11px] text-fog-400 bg-ink-900/85 backdrop-blur border border-ink-800 rounded-lg px-2 py-1 cursor-pointer hover:text-fog-200" title="除錯: 顯示全部 38 個群落邊界框">
-          <input id="debug-bbox" type="checkbox" class="accent-coral-500"/>
-          <span>除錯框線</span>
-        </label>
-        <label class="flex items-center gap-1.5 text-[11px] text-fog-400 bg-ink-900/85 backdrop-blur border border-ink-800 rounded-lg px-2 py-1 cursor-pointer hover:text-fog-200" title="顯示/隱藏小丑魚 A">
-          <input id="fish-toggle-a" type="checkbox" checked class="accent-coral-500"/>
-          <span>小丑魚 A</span>
-        </label>
-        <label class="flex items-center gap-1.5 text-[11px] text-fog-400 bg-ink-900/85 backdrop-blur border border-ink-800 rounded-lg px-2 py-1 cursor-pointer hover:text-fog-200" title="顯示/隱藏小丑魚 B">
-          <input id="fish-toggle-b" type="checkbox" checked class="accent-coral-500"/>
-          <span>小丑魚 B</span>
-        </label>
+        <div class="relative" id="options-dropdown-wrapper">
+          <button id="options-dropdown-btn" class="flex items-center gap-1.5 text-[11px] text-fog-400 bg-ink-900/85 backdrop-blur border border-ink-800 hover:border-coral-500/50 hover:text-fog-100 rounded-lg px-2.5 py-1">
+            <svg class="ico" style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <span>選項</span>
+            <svg style="width:10px;height:10px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div id="options-dropdown-menu" class="hidden absolute top-full left-0 mt-1 bg-ink-900/95 backdrop-blur border border-ink-800 rounded-lg py-1 min-w-[160px] shadow-lg z-50">
+            <div class="px-3 py-1 text-[10px] text-fog-500 font-semibold uppercase tracking-wide">除錯</div>
+            <label class="flex items-center gap-2 px-3 py-1.5 text-[11px] text-fog-400 hover:bg-ink-800/60 cursor-pointer">
+              <input id="debug-bbox" type="checkbox" class="accent-coral-500 w-3 h-3"/>
+              <span>群落框線</span>
+            </label>
+            <div class="border-t border-ink-800 my-1"></div>
+            <div class="px-3 py-1 text-[10px] text-fog-500 font-semibold uppercase tracking-wide">魚類</div>
+            <label class="flex items-center gap-2 px-3 py-1.5 text-[11px] text-fog-400 hover:bg-ink-800/60 cursor-pointer">
+              <input id="fish-toggle-clown" type="checkbox" checked class="accent-coral-500 w-3 h-3" data-fish="clown"/>
+              <span>小丑魚</span>
+            </label>
+            <label class="flex items-center gap-2 px-3 py-1.5 text-[11px] text-fog-400 hover:bg-ink-800/60 cursor-pointer">
+              <input id="fish-toggle-bluetang" type="checkbox" checked class="accent-coral-500 w-3 h-3" data-fish="blueTang"/>
+              <span>藍倒吊</span>
+            </label>
+            <label class="flex items-center gap-2 px-3 py-1.5 text-[11px] text-fog-400 hover:bg-ink-800/60 cursor-pointer">
+              <input id="fish-toggle-yellowtang" type="checkbox" checked class="accent-coral-500 w-3 h-3" data-fish="yellowTang"/>
+              <span>黃三角倒吊</span>
+            </label>
+            <label class="flex items-center gap-2 px-3 py-1.5 text-[11px] text-fog-400 hover:bg-ink-800/60 cursor-pointer">
+              <input id="fish-toggle-zebrasoma" type="checkbox" checked class="accent-coral-500 w-3 h-3" data-fish="zebrasoma,B"/>
+              <span>帆鰭吊</span>
+            </label>
+            <label class="flex items-center gap-2 px-3 py-1.5 text-[11px] text-fog-400 hover:bg-ink-800/60 cursor-pointer">
+              <input id="fish-toggle-emperor" type="checkbox" checked class="accent-coral-500 w-3 h-3" data-fish="emperor"/>
+              <span>皇帝神仙</span>
+            </label>
+          </div>
+        </div>
       </div>
       <!-- Top-right scene meta + FPS -->
       <div class="viewer-overlay absolute top-3 right-3 z-10 text-[11px] text-fog-400 bg-ink-900/85 backdrop-blur border border-ink-800 rounded-lg px-3 py-1.5">
@@ -211,6 +253,14 @@
         <span class="mx-2 text-ink-700">|</span>
         <span class="text-fog-500">FPS:</span> <span id="fps-readout" class="text-fog-200 tabular-nums">—</span>
       </div>
+      <!-- Fish view hint -->
+      <div id="fish-view-hint" class="hidden viewer-overlay absolute bottom-16 left-1/2 -translate-x-1/2 z-20 text-[12px] text-fog-100 bg-ink-900/90 backdrop-blur border border-coral-500/40 rounded-lg px-4 py-2 shadow-card">
+        魚視角模式 — 點擊任意處或按 ESC 退出
+      </div>
+      <!-- Fullscreen button -->
+      <button id="fullscreen-btn" title="全螢幕" class="viewer-overlay absolute top-3 right-3 z-20 mt-10 flex items-center gap-1 text-[11px] text-fog-300 bg-ink-900/85 backdrop-blur border border-ink-800 hover:border-coral-500/50 hover:text-fog-100 rounded-lg px-2 py-1">
+        <svg style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+      </button>
       <!-- Hover tooltip (weak-device fallback) -->
       <div id="hover-tip" class="hidden fixed z-50 pointer-events-none text-[11px] text-fog-100 bg-ink-900/95 border border-coral-500/40 rounded px-2 py-1 shadow-card"></div>
       <!-- Bottom-left controls panel -->
@@ -444,6 +494,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import {
   SparkRenderer, SplatMesh, SplatFileType,
   SplatEdit, SplatEditSdf, SplatEditSdfType, SplatEditRgbaBlendMode,
@@ -649,6 +701,8 @@ const GENUS_LINES = {
 let charTypingTimer = null;
 let charVisible = localStorage.getItem('charVisible') !== 'false';
 let charCurrentGenus = null;
+let oml2dInstance = null;
+let live2dActive = false;
 
 function typeText(el, text, speed = 35) {
   if (charTypingTimer) { clearInterval(charTypingTimer); charTypingTimer = null; }
@@ -660,30 +714,32 @@ function typeText(el, text, speed = 35) {
   }, speed);
 }
 
+function pickCharText(genus) {
+  if (genus === 'coral-chan') {
+    const pool = [CHAR_DATA.greeting, ...CHAR_DATA.info];
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+  const lines = GENUS_LINES[genus];
+  if (lines && lines.length) return lines[Math.floor(Math.random() * lines.length)];
+  const zh = CLASS_ZH[genus];
+  return zh ? `你點到了${zh}（${genus}）的群落！` : CHAR_DATA.greeting;
+}
+
 function showCharacter(genus) {
+  charCurrentGenus = genus;
+  const text = pickCharText(genus);
+
+  if (live2dActive && oml2dInstance) {
+    oml2dInstance.tipsMessage(text, 10000, 10);
+    return;
+  }
+
   const container = document.getElementById('character-container');
   const nameEl = document.getElementById('char-name');
   const textEl = document.getElementById('char-text');
   if (!container) return;
-
-  charCurrentGenus = genus;
   nameEl.textContent = CHAR_DATA.name;
-
-  let text;
-  if (genus === 'coral-chan') {
-    const pool = [CHAR_DATA.greeting, ...CHAR_DATA.info];
-    text = pool[Math.floor(Math.random() * pool.length)];
-  } else {
-    const lines = GENUS_LINES[genus];
-    if (lines && lines.length) {
-      text = lines[Math.floor(Math.random() * lines.length)];
-    } else {
-      const zh = CLASS_ZH[genus];
-      text = zh ? `你點到了${zh}（${genus}）的群落！` : CHAR_DATA.greeting;
-    }
-  }
   typeText(textEl, text);
-
   container.classList.remove('hidden');
   const showBtn = document.getElementById('char-show');
   if (showBtn) showBtn.classList.add('hidden');
@@ -720,6 +776,59 @@ function initCharacterSystem() {
   else hideCharacter();
 }
 
+function initLive2D() {
+  const lib = (typeof OML2D !== 'undefined') ? OML2D : window.OML2D;
+  if (!lib || !lib.loadOml2d) return;
+  try {
+    oml2dInstance = lib.loadOml2d({
+      dockedPosition: 'right',
+      menus: { disable: true },
+      statusBar: { disable: true },
+      tips: {
+        idleTips: { message: CHAR_DATA.info, interval: 25000 },
+        welcomeTips: {
+          message: {
+            daybreak: CHAR_DATA.greeting, morning: CHAR_DATA.greeting,
+            noon: CHAR_DATA.greeting, afternoon: CHAR_DATA.greeting,
+            dusk: CHAR_DATA.greeting, night: CHAR_DATA.greeting,
+            lateNight: CHAR_DATA.greeting, weeHours: CHAR_DATA.greeting,
+          },
+          duration: 8000, priority: 3,
+        },
+        copyTips: { message: [] },
+        style: {
+          fontSize: '11px',
+          fontFamily: "'Inter', system-ui, sans-serif",
+          minWidth: '160px',
+          maxWidth: '200px',
+          borderRadius: '8px',
+          padding: '6px 10px',
+          background: 'rgba(255,255,255,.92)',
+          backdropFilter: 'blur(8px)',
+          border: '1px solid rgba(251,146,60,.3)',
+          color: '#ffffff',
+          boxShadow: '0 2px 8px rgba(0,0,0,.08)',
+        },
+      },
+      models: [
+        {
+          path: 'https://cdn.jsdelivr.net/gh/guansss/pixi-live2d-display/test/assets/shizuku/shizuku.model.json',
+          position: [0, 60],
+          scale: 0.25,
+          stageStyle: { height: 360, width: 240 },
+        },
+      ],
+    });
+    live2dActive = true;
+    const cc = document.getElementById('character-container');
+    const sb = document.getElementById('char-show');
+    if (cc) cc.style.display = 'none';
+    if (sb) sb.style.display = 'none';
+  } catch (e) {
+    console.warn('Live2D failed, using static fallback:', e);
+  }
+}
+
 // =========================================
 //  Modals
 // =========================================
@@ -737,8 +846,10 @@ document.querySelectorAll('.modal-backdrop').forEach(m => m.addEventListener('cl
 // (picking 不依賴可見的 bbox — 用獨立的 Box3 raycaster targets，所以兩個 mode 都能直接點選 3D model)
 // 註: 'ply' key 保留為向後相容名稱，實際載入是 SOG (Phase 1 轉檔結果)
 const MODE_CONFIG = {
-  natural:   { ply: 'coral_main_2.sog',      label: '自然色' },
-  instances: { ply: 'coral_instances_2.sog', label: '群落染色' },
+  natural:   { ply: 'coral/coral_main_2.sog',      label: '自然色', isMesh: false },
+  instances: { ply: 'coral/coral_instances_2.sog', label: '群落染色', isMesh: false },
+  mesh:      { glb: 'coral/coral_main_2_mesh.glb', label: 'Mesh', isMesh: true },
+  meshInst:  { glb: 'coral/coral_instances_2_mesh.glb', label: 'Mesh 群落', isMesh: true },
 };
 STATE.currentMode = 'natural';
 STATE.currentPly  = MODE_CONFIG.natural.ply;
@@ -749,7 +860,8 @@ function computeSceneBounds() {
   // 兩者座標一致，做名稱正規化查找。
   const sogKey = STATE.currentPly;
   const plyKey = sogKey.replace(/\.sog$/, '.ply');
-  const b = STATE.sceneBounds && (STATE.sceneBounds[sogKey] || STATE.sceneBounds[plyKey]);
+  const basename = plyKey.split('/').pop();
+  const b = STATE.sceneBounds && (STATE.sceneBounds[sogKey] || STATE.sceneBounds[plyKey] || STATE.sceneBounds[basename]);
   if (b) {
     // 用 robust_*（2%-98% percentile）避開 SuperSplat 後 outlier splat 把 bbox 拉大的問題
     return {
@@ -836,6 +948,26 @@ function setBboxHighlight(instanceId) {
 // =========================================
 //  Mode switching: swap splat scene + toggle bbox group
 // =========================================
+async function loadMeshGLB(url) {
+  return new Promise((resolve, reject) => {
+    const loader = new GLTFLoader();
+    loader.load(url, gltf => {
+      const meshGroup = new THREE.Group();
+      meshGroup.name = 'coralMesh';
+      gltf.scene.traverse(child => {
+        if (child.isMesh) {
+          child.material = new THREE.MeshBasicMaterial({
+            vertexColors: true,
+            side: THREE.DoubleSide,
+          });
+        }
+      });
+      meshGroup.add(gltf.scene);
+      resolve(meshGroup);
+    }, undefined, reject);
+  });
+}
+
 async function setMode(mode) {
   if (mode === STATE.currentMode || STATE.modeSwitching) return;
   const cfg = MODE_CONFIG[mode];
@@ -845,39 +977,60 @@ async function setMode(mode) {
   const loading = document.getElementById('loading');
   const loadingMsg = document.getElementById('loading-msg');
   try {
-    if (cfg.ply !== STATE.currentPly) {
+    const v = STATE.viewer;
+
+    if (cfg.isMesh) {
       loadingMsg.textContent = `載入${cfg.label}場景中…`;
       loading.classList.remove('hidden');
-      const v = STATE.viewer;
-      const url = './assets/' + cfg.ply;
-      const next = new SplatMesh({
-        url,
-        fileType: SplatFileType.PCSOGSZIP,
-        raycastable: true,
-        minRaycastOpacity: 0.05,
-      });
-      if (v.splat) {
-        next.quaternion.copy(v.splat.quaternion);
-        next.position.copy(v.splat.position);
-        next.scale.copy(v.splat.scale);
+
+      const meshKey = cfg.glb;
+      if (!STATE.meshCache) STATE.meshCache = {};
+      if (!STATE.meshCache[meshKey]) {
+        const meshObj = await loadMeshGLB('./assets/' + cfg.glb);
+        STATE.meshCache[meshKey] = meshObj;
+        v.scene.add(meshObj);
       }
-      await Promise.race([
-        next.initialized,
-        new Promise((_, rej) => setTimeout(() => rej(new Error('splat load timeout 60s')), 60000)),
-      ]);
-      // swap
-      if (v.splat) {
-        v.scene.remove(v.splat);
-        v.splat.dispose?.();
-      }
-      v.scene.add(next);
-      v.splat = next;
-      STATE.currentPly = cfg.ply;
+      // Hide all meshes and splat
+      if (v.splat) v.splat.visible = false;
+      Object.values(STATE.meshCache).forEach(m => m.visible = false);
+      STATE.meshCache[meshKey].visible = true;
+      document.getElementById('splat-count').textContent = cfg.label;
       loading.classList.add('hidden');
-      const n = next.numSplats ?? next.packedSplats?.numSplats ?? null;
-      document.getElementById('splat-count').textContent = n ? n.toLocaleString() : '—';
+    } else {
+      if (STATE.meshCache) Object.values(STATE.meshCache).forEach(m => m.visible = false);
+
+      if (cfg.ply !== STATE.currentPly) {
+        loadingMsg.textContent = `載入${cfg.label}場景中…`;
+        loading.classList.remove('hidden');
+        const url = './assets/' + cfg.ply;
+        const next = new SplatMesh({
+          url,
+          fileType: SplatFileType.PCSOGSZIP,
+          raycastable: true,
+          minRaycastOpacity: 0.05,
+        });
+        if (v.splat) {
+          next.quaternion.copy(v.splat.quaternion);
+          next.position.copy(v.splat.position);
+          next.scale.copy(v.splat.scale);
+        }
+        await Promise.race([
+          next.initialized,
+          new Promise((_, rej) => setTimeout(() => rej(new Error('splat load timeout 60s')), 60000)),
+        ]);
+        if (v.splat) {
+          v.scene.remove(v.splat);
+          v.splat.dispose?.();
+        }
+        v.scene.add(next);
+        v.splat = next;
+        STATE.currentPly = cfg.ply;
+        loading.classList.add('hidden');
+        const n = next.numSplats ?? next.packedSplats?.numSplats ?? null;
+        document.getElementById('splat-count').textContent = n ? n.toLocaleString() : '—';
+      }
+      if (v.splat) v.splat.visible = true;
     }
-    if (STATE.viewer.splat) STATE.viewer.splat.visible = true;
     STATE.currentMode = mode;
     installPickListeners();
   } catch (err) {
@@ -1023,7 +1176,65 @@ function findColonyAt(e, includeSplatRaycast = false) {
   return best ? { item: best, method: 'screen-fallback' } : { item: null, method: 'none' };
 }
 
+function raycastFish(e) {
+  if (!STATE.viewer || !CLOWNFISH.length) return null;
+  const canvas = getViewerCanvas();
+  if (!canvas) return null;
+  const rect = canvas.getBoundingClientRect();
+  const mouse = new THREE.Vector2(
+    ((e.clientX - rect.left) / rect.width) * 2 - 1,
+    -((e.clientY - rect.top) / rect.height) * 2 + 1,
+  );
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(mouse, STATE.viewer.camera);
+  const fishMeshes = [];
+  for (const f of CLOWNFISH) {
+    f.mesh.traverse(child => { if (child.isMesh) fishMeshes.push({ mesh: child, fishRef: f }); });
+  }
+  const objects = fishMeshes.map(fm => fm.mesh);
+  const hits = raycaster.intersectObjects(objects, false);
+  if (hits.length > 0) {
+    const hitMesh = hits[0].object;
+    return fishMeshes.find(fm => fm.mesh === hitMesh)?.fishRef || null;
+  }
+  return null;
+}
+
+function enterFishView(fish) {
+  followingFish = fish;
+  if (STATE.viewer) STATE.viewer.controls.enabled = false;
+  const hint = document.getElementById('fish-view-hint');
+  if (hint) hint.classList.remove('hidden');
+}
+
+function exitFishView() {
+  followingFish = null;
+  if (STATE.viewer) STATE.viewer.controls.enabled = true;
+  const hint = document.getElementById('fish-view-hint');
+  if (hint) hint.classList.add('hidden');
+}
+
+const _fishCamOffset = new THREE.Vector3();
+const _fishCamTarget = new THREE.Vector3();
+
+function updateFishCamera() {
+  if (!followingFish || !STATE.viewer) return;
+  const f = followingFish;
+  const pos = f.mesh.position.clone();
+  const fwd = f.path.getTangentAt(f.t).normalize();
+  const up = new THREE.Vector3(0, -1, 0);
+  _fishCamOffset.copy(fwd).multiplyScalar(-0.8);
+  _fishCamOffset.addScaledVector(up, 0.3);
+  const camPos = pos.clone().add(_fishCamOffset);
+  _fishCamTarget.copy(pos).addScaledVector(fwd, 1.0);
+  STATE.viewer.camera.position.lerp(camPos, 0.08);
+  STATE.viewer.camera.lookAt(_fishCamTarget);
+}
+
 function onPickClick(e) {
+  if (followingFish) { exitFishView(); return; }
+  const hitFish = raycastFish(e);
+  if (hitFish) { enterFishView(hitFish); return; }
   const { item: best, method } = findColonyAt(e, true);
   console.log('[pick]', method, best ? `colony #${best.colony.instance_id} ${best.colony.class_name}` : 'no hit');
   if (best) {
@@ -1116,7 +1327,7 @@ function flyToColony(c, durationMs = 700, startPosOverride = null, startTgtOverr
   // 視線方向: 從「場景中心 → colony」延伸 → camera 站在 scene 外側看回 colony
   // → 確保其他 colony 不會擋在 camera 跟目標之間
   let dir;
-  const sb = STATE.sceneBounds && STATE.sceneBounds[STATE.currentPly];
+  const sb = STATE.sceneBounds && (STATE.sceneBounds[STATE.currentPly] || STATE.sceneBounds[STATE.currentPly.split('/').pop()] || STATE.sceneBounds[STATE.currentPly.replace(/\.sog$/, '.ply').split('/').pop()]);
   if (sb && sb.robust_center) {
     const sceneCenter = new THREE.Vector3(sb.robust_center[0], sb.robust_center[1], sb.robust_center[2]);
     dir = center.clone().sub(sceneCenter);
@@ -1169,7 +1380,7 @@ function lazyLoadInstanceMesh() {
   console.log('[hover] lazy-loading instances overlay mesh...');
   const t0 = performance.now();
   const mesh = new SplatMesh({
-    url: './assets/coral_instances_2.sog',
+    url: './assets/coral/coral_instances_2.sog',
     fileType: SplatFileType.PCSOGSZIP,
     raycastable: false,  // hover overlay 不需被 raycast
   });
@@ -1289,8 +1500,8 @@ function processPendingHover() {
 // =========================================
 const CLOWNFISH = [];
 const FISH_MIXERS = [];
-let FISH_TEMPLATE_A = null;
 let FISH_TEMPLATE_B = null;
+let followingFish = null;
 
 function createFishPath(cx, cz, rx, rz, baseY, style = 'circle') {
   const pts = [];
@@ -1416,20 +1627,36 @@ function fixMat(mat) {
 
 function spawnFish(scene, template, cfg, index) {
   const container = new THREE.Group();
-  const fish = template.clone();
+  const fish = SkeletonUtils.clone(template);
   fish.scale.setScalar(cfg.sz);
+
+  // Hide helper objects (lines, curves, rig visualizers) but keep hierarchy for animation
+  fish.traverse(child => {
+    if (child.isLine || child.isLineSegments || child.isPoints) child.visible = false;
+  });
+
+  const useOriginalMat = cfg.type !== 'B';
   fish.traverse(child => {
     if (child.isMesh) {
-      if (Array.isArray(child.material)) {
-        child.material = child.material.map(m => {
-          if (m && m.clone) { const c2 = m.clone(); fixMat(c2); return c2; }
-          return CLOWNFISH_MAT.clone();
-        });
-      } else if (child.material && child.material.clone) {
-        child.material = child.material.clone();
-        fixMat(child.material);
+      if (useOriginalMat) {
+        if (Array.isArray(child.material)) {
+          child.material = child.material.map(m => { const c2 = m.clone(); c2.side = THREE.DoubleSide; return c2; });
+        } else if (child.material) {
+          child.material = child.material.clone();
+          child.material.side = THREE.DoubleSide;
+        }
       } else {
-        child.material = CLOWNFISH_MAT.clone();
+        if (Array.isArray(child.material)) {
+          child.material = child.material.map(m => {
+            if (m && m.clone) { const c2 = m.clone(); fixMat(c2); return c2; }
+            return CLOWNFISH_MAT.clone();
+          });
+        } else if (child.material && child.material.clone) {
+          child.material = child.material.clone();
+          fixMat(child.material);
+        } else {
+          child.material = CLOWNFISH_MAT.clone();
+        }
       }
     }
   });
@@ -1455,13 +1682,14 @@ function spawnFish(scene, template, cfg, index) {
     phase: index * 1.3,
     mixer,
     yRot: cfg.yRot || 0,
-    type: cfg.type || 'A',
+    type: cfg.type || 'B',
   });
 }
 
-function setFishVisibility(type, visible) {
+function setFishVisibility(types, visible) {
+  const typeArr = Array.isArray(types) ? types : [types];
   for (const f of CLOWNFISH) {
-    if (f.type === type) f.mesh.visible = visible;
+    if (typeArr.includes(f.type)) f.mesh.visible = visible;
   }
 }
 
@@ -1471,41 +1699,87 @@ async function initClownfish(scene, bounds) {
   const topY = bounds.robust_min[1];
   console.log('[fish] scene center:', cx, cz, 'topY:', topY, 'extent:', ex, ez);
 
-  scene.add(new THREE.AmbientLight(0x88bbdd, 0.8));
-  const sun = new THREE.DirectionalLight(0xffeedd, 1.2);
-  sun.position.set(cx, topY - 15, cz);
+  scene.add(new THREE.AmbientLight(0xffffff, 1.5));
+  const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+  sun.position.set(cx, topY + 20, cz + 10);
   scene.add(sun);
 
-  const loader = new FBXLoader();
-  const loadFBX = url => new Promise((res, rej) => {
-    loader.load(url, obj => {
-      console.log('[fish] loaded', url);
-      const box = new THREE.Box3().setFromObject(obj);
-      const size = new THREE.Vector3();
-      box.getSize(size);
-      console.log('[fish]', url, 'native size:', size.x.toFixed(1), size.y.toFixed(1), size.z.toFixed(1));
-      res(obj);
-    }, undefined, err => {
-      console.error('[fish] load error', url, err);
-      rej(err);
+  const FISH_ALBEDO_MAP = {
+    'emperor-angelfish': 'Emperor Angelfish Albedo.png',
+  };
+
+  function loadFBXWithTex(url) {
+    return new Promise((res, rej) => {
+      const dir = url.substring(0, url.lastIndexOf('/') + 1);
+      const hasSourceDir = dir.endsWith('source/');
+      const texBase = hasSourceDir ? dir.replace(/source\/$/, '') + 'textures/' : null;
+      const manager = new THREE.LoadingManager();
+      if (texBase) {
+        manager.setURLModifier(reqUrl => {
+          const filename = reqUrl.split(/[/\\]/).pop();
+          if (filename.match(/\.(png|jpg|jpeg|tga|bmp|gif)$/i)) {
+            return texBase + filename;
+          }
+          return reqUrl;
+        });
+      }
+      const loader = new FBXLoader(manager);
+      loader.load(url, obj => {
+        console.log('[fish] loaded', url);
+
+        // Check if any mesh is missing texture and try to fix
+        const folderMatch = url.match(/fish\/([^/]+)\//);
+        const folderName = folderMatch ? folderMatch[1] : null;
+        const albedoFile = folderName && FISH_ALBEDO_MAP[folderName];
+        if (texBase && albedoFile) {
+          const texLoader = new THREE.TextureLoader();
+          const albedoTex = texLoader.load(texBase + albedoFile);
+          albedoTex.colorSpace = THREE.SRGBColorSpace;
+          obj.traverse(child => {
+            if (child.isMesh) {
+              const mats = Array.isArray(child.material) ? child.material : [child.material];
+              mats.forEach(m => {
+                if (m && !m.map) {
+                  m.map = albedoTex;
+                  m.needsUpdate = true;
+                }
+              });
+            }
+          });
+        }
+
+        const box = new THREE.Box3().setFromObject(obj);
+        const s = new THREE.Vector3(); box.getSize(s);
+        const maxDim = Math.max(s.x, s.y, s.z);
+        console.log('[fish]', url, 'maxDim:', maxDim.toFixed(2));
+        res({ obj, maxDim });
+      }, undefined, err => { console.error('[fish] load error', url, err); rej(err); });
     });
-  });
+  }
 
   try {
-    const [modelA, modelB] = await Promise.all([
-      loadFBX('./assets/3d-model.fbx'),
-      loadFBX('./assets/pez3.fbx'),
+    const results = await Promise.all([
+      loadFBXWithTex('./assets/fish/pez3.fbx'),
+      loadFBXWithTex('./assets/fish/clownfish/source/clown_fish_ain.fbx'),
+      loadFBXWithTex('./assets/fish/blue-tang/source/Blue_Tang_ain.fbx'),
+      loadFBXWithTex('./assets/fish/yellow-tang/source/Fish 3_2.fbx'),
+      loadFBXWithTex('./assets/fish/zebrasoma/source/butterfly_fish_ani.fbx'),
+      loadFBXWithTex('./assets/fish/emperor-angelfish/source/Emperor Angelfish.fbx'),
     ]);
-    FISH_TEMPLATE_A = modelA;
+    const [rB, rClown, rBlueTang, rYellowTang, rZebrasoma, rEmperor] = results;
+    const modelB = rB.obj;
+    const modelClown = rClown.obj, modelBlueTang = rBlueTang.obj;
+    const modelYellowTang = rYellowTang.obj, modelZebrasoma = rZebrasoma.obj;
+    const modelEmperor = rEmperor.obj;
     FISH_TEMPLATE_B = modelB;
 
-    const boxA = new THREE.Box3().setFromObject(modelA);
-    const sA = new THREE.Vector3(); boxA.getSize(sA);
-    const boxB = new THREE.Box3().setFromObject(modelB);
-    const sB = new THREE.Vector3(); boxB.getSize(sB);
     const targetLen = 0.6;
-    const scaleA = targetLen / Math.max(sA.x, sA.y, sA.z);
-    const scaleB = targetLen / Math.max(sB.x, sB.y, sB.z);
+    const scaleB = targetLen / rB.maxDim;
+    const scaleClown = targetLen / rClown.maxDim;
+    const scaleBlueTang = targetLen / rBlueTang.maxDim;
+    const scaleYellowTang = targetLen / rYellowTang.maxDim;
+    const scaleZebrasoma = targetLen / rZebrasoma.maxDim;
+    const scaleEmperor = targetLen / rEmperor.maxDim;
     const rotA = -Math.PI / 2;
     const rotB = Math.PI / 2;
 
@@ -1513,29 +1787,38 @@ async function initClownfish(scene, bounds) {
     const midY = (topY + botY) / 2;
     const spanY = botY - topY;
 
+    const TEMPLATES = { B: modelB, clown: modelClown, blueTang: modelBlueTang, yellowTang: modelYellowTang, zebrasoma: modelZebrasoma, emperor: modelEmperor };
+    const SCALES = { B: scaleB, clown: scaleClown, blueTang: scaleBlueTang, yellowTang: scaleYellowTang, zebrasoma: scaleZebrasoma, emperor: scaleEmperor };
+
     const cfgs = [
-      // A fish — spread across entire coral, varied paths
-      { sz: scaleA * 1.0,  sp: 0.030, rx: ex*0.60, rz: ez*0.60, y: topY - 0.5,           cx, cz, yRot: rotA, type: 'A', style: 'circle' },
-      { sz: scaleA * 0.85, sp: 0.038, rx: ex*0.45, rz: ez*0.50, y: topY + spanY * 0.15,   cx, cz, yRot: rotA, type: 'A', style: 'figure8' },
-      { sz: scaleA * 0.95, sp: 0.025, rx: ex*0.75, rz: ez*0.70, y: topY + spanY * 0.3,    cx, cz, yRot: rotA, type: 'A', style: 'drift' },
-      { sz: scaleA * 0.80, sp: 0.042, rx: ex*0.35, rz: ez*0.35, y: midY,                  cx, cz, yRot: rotA, type: 'A', style: 'circle' },
-      { sz: scaleA * 0.90, sp: 0.033, rx: ex*0.55, rz: ez*0.45, y: midY + spanY * 0.15,   cx, cz, yRot: rotA, type: 'A', style: 'vertical' },
-      { sz: scaleA * 0.75, sp: 0.048, rx: ex*0.30, rz: ez*0.40, y: topY + spanY * 0.1,    cx, cz, yRot: rotA, type: 'A', style: 'figure8' },
-      { sz: scaleA * 1.05, sp: 0.022, rx: ex*0.80, rz: ez*0.75, y: topY + spanY * 0.45,   cx, cz, yRot: rotA, type: 'A', style: 'drift' },
-      { sz: scaleA * 0.70, sp: 0.050, rx: ex*0.40, rz: ez*0.30, y: botY - spanY * 0.15,   cx, cz, yRot: rotA, type: 'A', style: 'circle' },
-      { sz: scaleA * 0.88, sp: 0.035, rx: ex*0.50, rz: ez*0.55, y: botY - spanY * 0.3,    cx, cz, yRot: rotA, type: 'A', style: 'vertical' },
-      // B fish — fewer, scattered
-      { sz: scaleB * 0.85, sp: 0.040, rx: ex*0.45, rz: ez*0.45, y: topY + spanY * 0.2,    cx, cz, yRot: rotB, type: 'B', style: 'drift' },
-      { sz: scaleB * 0.75, sp: 0.045, rx: ex*0.35, rz: ez*0.50, y: midY + spanY * 0.1,    cx, cz, yRot: rotB, type: 'B', style: 'figure8' },
-      { sz: scaleB * 0.90, sp: 0.032, rx: ex*0.55, rz: ez*0.40, y: botY - spanY * 0.25,   cx, cz, yRot: rotB, type: 'B', style: 'circle' },
+      // B fish (original pez3 model)
+      { szMul: 0.85, sp: 0.040, rx: ex*0.45, rz: ez*0.45, y: topY + spanY * 0.2,    cx, cz, yRot: rotB, type: 'B', style: 'drift' },
+      { szMul: 0.75, sp: 0.045, rx: ex*0.35, rz: ez*0.50, y: midY + spanY * 0.1,    cx, cz, yRot: rotB, type: 'B', style: 'figure8' },
+      // New clownfish (textured)
+      { szMul: 0.9,  sp: 0.035, rx: ex*0.50, rz: ez*0.55, y: topY + spanY * 0.1,  cx, cz, yRot: 0, type: 'clown', style: 'circle' },
+      { szMul: 0.8,  sp: 0.042, rx: ex*0.40, rz: ez*0.40, y: midY + spanY * 0.05, cx, cz, yRot: 0, type: 'clown', style: 'figure8' },
+      { szMul: 0.85, sp: 0.038, rx: ex*0.55, rz: ez*0.35, y: botY - spanY * 0.2,  cx, cz, yRot: 0, type: 'clown', style: 'drift' },
+      // Blue tang
+      { szMul: 0.75, sp: 0.028, rx: ex*0.65, rz: ez*0.55, y: topY + spanY * 0.25, cx, cz, yRot: -Math.PI, type: 'blueTang', style: 'drift' },
+      { szMul: 0.70, sp: 0.033, rx: ex*0.50, rz: ez*0.60, y: midY - spanY * 0.1,  cx, cz, yRot: -Math.PI, type: 'blueTang', style: 'circle' },
+      // Yellow tang
+      { szMul: 0.55, sp: 0.032, rx: ex*0.55, rz: ez*0.50, y: topY + spanY * 0.35, cx, cz, yRot: 0, type: 'yellowTang', style: 'figure8' },
+      { szMul: 0.50, sp: 0.040, rx: ex*0.40, rz: ez*0.45, y: midY + spanY * 0.15, cx, cz, yRot: 0, type: 'yellowTang', style: 'circle' },
+      // Zebrasoma (sailfin tang)
+      { szMul: 0.70, sp: 0.026, rx: ex*0.70, rz: ez*0.60, y: topY + spanY * 0.4,  cx, cz, yRot: 0, type: 'zebrasoma', style: 'drift' },
+      { szMul: 0.65, sp: 0.036, rx: ex*0.45, rz: ez*0.55, y: botY - spanY * 0.3,  cx, cz, yRot: 0, type: 'zebrasoma', style: 'vertical' },
+      // Emperor angelfish
+      { szMul: 0.90, sp: 0.020, rx: ex*0.75, rz: ez*0.70, y: topY + spanY * 0.2,  cx, cz, yRot: 0, type: 'emperor', style: 'drift' },
+      { szMul: 0.80, sp: 0.025, rx: ex*0.60, rz: ez*0.50, y: midY,               cx, cz, yRot: 0, type: 'emperor', style: 'circle' },
     ];
     cfgs.forEach((c, i) => {
-      const tpl = c.type === 'A' ? FISH_TEMPLATE_A : FISH_TEMPLATE_B;
+      c.sz = SCALES[c.type] * c.szMul;
+      const tpl = TEMPLATES[c.type] || FISH_TEMPLATE_B;
       spawnFish(scene, tpl, c, i);
     });
-    console.log('[fish] spawned', CLOWNFISH.length, 'clownfish');
+    console.log('[fish] spawned', CLOWNFISH.length, 'fish total');
   } catch (err) {
-    console.error('[fish] FBX load failed, skipping clownfish:', err);
+    console.error('[fish] FBX load failed, skipping fish:', err);
   }
 }
 
@@ -1587,6 +1870,7 @@ async function init3D() {
     setRendererSize();
 
     const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x1a2a3a);
     const camera = new THREE.PerspectiveCamera(60, root.clientWidth / root.clientHeight, 0.01, 1000);
     // Brush PLY/SOG 視覺上方 = -Y (COLMAP/INRIA 慣例)，所以設 camera.up=[0,-1,0]
     // 而非旋轉 splat mesh — 保持 splat world 座標跟 colonies.json bbox 對位
@@ -1646,7 +1930,8 @@ async function init3D() {
     {
       const sogKey = STATE.currentPly;
       const plyKey = sogKey.replace(/\.sog$/, '.ply');
-      const sb = STATE.sceneBounds && (STATE.sceneBounds[sogKey] || STATE.sceneBounds[plyKey]);
+      const basename = plyKey.split('/').pop();
+      const sb = STATE.sceneBounds && (STATE.sceneBounds[sogKey] || STATE.sceneBounds[plyKey] || STATE.sceneBounds[basename]);
       if (sb && sb.robust_center) await initClownfish(scene, sb);
     }
 
@@ -1659,27 +1944,35 @@ async function init3D() {
     const resetBtn = document.getElementById('reset-view');
     if (resetBtn) resetBtn.addEventListener('click', () => resetView());
 
+    // Options dropdown toggle
+    const ddBtn = document.getElementById('options-dropdown-btn');
+    const ddMenu = document.getElementById('options-dropdown-menu');
+    if (ddBtn && ddMenu) {
+      ddBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        ddMenu.classList.toggle('hidden');
+      });
+      document.addEventListener('click', (e) => {
+        if (!ddMenu.contains(e.target) && e.target !== ddBtn) ddMenu.classList.add('hidden');
+      });
+    }
+
     // Debug bbox 勾選
     const dbgChk = document.getElementById('debug-bbox');
     if (dbgChk) {
       dbgChk.addEventListener('change', () => {
         STATE.debugBbox = dbgChk.checked;
-        const total = STATE.bboxItems ? STATE.bboxItems.length : 0;
-        console.log('[debug-bbox] toggled =', dbgChk.checked, ' (', total, 'helpers total)');
         setBboxHighlight(STATE.selectedColonyId);
-        if (STATE.bboxItems) {
-          const visN = STATE.bboxItems.filter(it => it.helper.visible).length;
-          console.log('[debug-bbox] now visible:', visN);
-        }
       });
-      console.log('[init] debug-bbox checkbox bound');
     }
 
     // Fish toggles
-    const fishA = document.getElementById('fish-toggle-a');
-    const fishB = document.getElementById('fish-toggle-b');
-    if (fishA) fishA.addEventListener('change', () => setFishVisibility('A', fishA.checked));
-    if (fishB) fishB.addEventListener('change', () => setFishVisibility('B', fishB.checked));
+    document.querySelectorAll('[data-fish]').forEach(chk => {
+      chk.addEventListener('change', () => {
+        const types = chk.dataset.fish.split(',');
+        setFishVisibility(types, chk.checked);
+      });
+    });
 
     // Picking listeners
     installPickListeners();
@@ -1710,8 +2003,21 @@ async function init3D() {
     window.addEventListener('keydown', e => {
       if (e.key === 'f' || e.key === 'F') fitCameraToScene(STATE.viewer);
       if (e.key === 'r' || e.key === 'R') resetView();
-      if (e.key === 'Escape') clearColony();
+      if (e.key === 'Escape') { if (followingFish) exitFishView(); else clearColony(); }
     });
+
+    // Fullscreen
+    const fsBtn = document.getElementById('fullscreen-btn');
+    const viewerSection = root.closest('.relative') || root.parentElement;
+    if (fsBtn) {
+      fsBtn.addEventListener('click', () => {
+        if (!document.fullscreenElement) {
+          viewerSection.requestFullscreen().catch(() => {});
+        } else {
+          document.exitFullscreen();
+        }
+      });
+    }
 
     // Render loop (Spark 已掛 scene 內，自己處理 splat 排序與繪製；我們只跑 standard three render)
     let resizeQueued = false;
@@ -1739,7 +2045,8 @@ async function init3D() {
       lastFrameTime = frameNow;
       processPendingHover();
       updateClownfish(dt);
-      controls.update();
+      updateFishCamera();
+      if (!followingFish) controls.update();
       renderer.render(scene, camera);
       fpsFrames++;
       if (frameNow - fpsLast >= 1000) {
@@ -1775,13 +2082,13 @@ async function main() {
 
 
   // colony meta
-  const cr = await fetch('./assets/colonies.json');
+  const cr = await fetch('./assets/coral/colonies.json');
   STATE.colonies = await cr.json();
   document.getElementById('colony-count').textContent = STATE.colonies.n_colonies;
 
   // scene bounds sidecar (per-PLY real bbox)
   try {
-    const sr = await fetch('./assets/scene_bounds.json');
+    const sr = await fetch('./assets/coral/scene_bounds.json');
     STATE.sceneBounds = await sr.json();
   } catch { STATE.sceneBounds = null; }
 
@@ -1796,8 +2103,9 @@ async function main() {
 
   setInterval(tick, 30000);
 
-  // Character guide
+  // Character guide (static fallback + Live2D)
   initCharacterSystem();
+  initLive2D();
 
   // 3D
   init3D();

@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<title>魚類模型除錯面板 — 珊瑚礁數位孿生平台</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🪸</text></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+        colors: {
+          ink:    { 950:'#f8fafc', 900:'#f1f5f9', 800:'#e2e8f0', 700:'#cbd5e1', 600:'#94a3b8' },
+          fog:    { 100:'#1e293b', 200:'#334155', 300:'#475569', 400:'#64748b', 500:'#94a3b8' },
+          coral:  { 300:'#fdba74', 400:'#fb923c', 500:'#f97316', 600:'#ea580c' },
+        },
+      }
+    }
+  };
+</script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+  }
+}
+</script>
+<style>
+  html, body { font-family: 'Inter', system-ui, sans-serif; height:100%; }
+  body { background:#ffffff; color:#1e293b; overflow-y:auto; }
+  .card-canvas { width:100%; height:280px; display:block; cursor:grab; }
+  .card-canvas:active { cursor:grabbing; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-gray-200">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-coral-400 to-coral-600 flex items-center justify-center">
+        <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      </div>
+      <div>
+        <h1 class="text-sm font-bold text-fog-100">魚類模型除錯面板</h1>
+        <p class="text-[10px] text-fog-400">Fish Model Debug — 珊瑚礁數位孿生平台</p>
+      </div>
+    </div>
+    <a href="./" class="text-[11px] text-fog-400 hover:text-coral-500 border border-gray-200 rounded-lg px-3 py-1.5 hover:border-coral-400 transition-colors">
+      返回主頁面
+    </a>
+  </div>
+</header>
+
+<!-- Direction legend -->
+<div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
+  <div class="flex gap-3 text-[11px] text-fog-400">
+    <span class="bg-gray-100 rounded-full px-3 py-1">模型數: <b class="text-fog-100" id="total-count">7</b></span>
+    <span class="bg-gray-100 rounded-full px-3 py-1">有貼圖: <b class="text-fog-100" id="tex-count">--</b></span>
+    <span class="bg-gray-100 rounded-full px-3 py-1">有動畫: <b class="text-fog-100" id="anim-count">--</b></span>
+  </div>
+  <div class="ml-auto flex items-center gap-3 text-[10px] font-medium">
+    <span class="text-fog-400">方向參考:</span>
+    <span class="flex items-center gap-1"><span class="inline-block w-3 h-0.5 bg-red-500 rounded"></span><span class="text-red-500">+Z 前</span></span>
+    <span class="flex items-center gap-1"><span class="inline-block w-3 h-0.5 bg-blue-500 rounded"></span><span class="text-blue-500">+X 右</span></span>
+    <span class="flex items-center gap-1"><span class="inline-block w-3 h-0.5 bg-green-500 rounded"></span><span class="text-green-500">+Y 上</span></span>
+  </div>
+</div>
+
+<!-- Grid -->
+<div class="max-w-7xl mx-auto px-4 pb-8">
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="grid"></div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+
+const FISH = [
+  { id: 'A', name: '小丑魚 A', file: '3d-model.fbx', url: './assets/fish/3d-model.fbx', hasTexDir: false },
+  { id: 'B', name: '小丑魚 B', file: 'pez3.fbx', url: './assets/fish/pez3.fbx', hasTexDir: false },
+  { id: 'clown', name: '小丑魚', file: 'clown_fish_ain.fbx', url: './assets/fish/clownfish/source/clown_fish_ain.fbx', hasTexDir: true },
+  { id: 'blueTang', name: '藍倒吊', file: 'Blue_Tang_ain.fbx', url: './assets/fish/blue-tang/source/Blue_Tang_ain.fbx', hasTexDir: true },
+  { id: 'yellowTang', name: '黃三角倒吊', file: 'Fish 3_2.fbx', url: './assets/fish/yellow-tang/source/Fish 3_2.fbx', hasTexDir: true },
+  { id: 'zebrasoma', name: '帆鰭吊', file: 'butterfly_fish_ani.fbx', url: './assets/fish/zebrasoma/source/butterfly_fish_ani.fbx', hasTexDir: true },
+  { id: 'emperor', name: '皇帝神仙', file: 'Emperor Angelfish.fbx', url: './assets/fish/emperor-angelfish/source/Emperor Angelfish.fbx', hasTexDir: true },
+];
+
+const ALBEDO_OVERRIDES = { emperor: 'Emperor Angelfish Albedo.png' };
+
+const grid = document.getElementById('grid');
+let texTotal = 0, animTotal = 0;
+
+FISH.forEach(fish => {
+  const card = document.createElement('div');
+  card.className = 'bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col';
+  card.innerHTML = `
+    <div class="flex items-center justify-between px-4 py-2.5 bg-gray-50 border-b border-gray-100">
+      <div>
+        <span class="text-[13px] font-semibold text-fog-100">${fish.name}</span>
+        <span class="ml-2 text-[10px] text-fog-400 font-mono">${fish.file}</span>
+      </div>
+      <span class="text-[10px] font-semibold bg-coral-500/10 text-coral-600 px-2 py-0.5 rounded-full">${fish.id}</span>
+    </div>
+    <canvas class="card-canvas bg-gradient-to-b from-slate-800 to-slate-900" id="canvas-${fish.id}"></canvas>
+    <div class="px-4 py-2.5 text-[11px] text-fog-400 leading-relaxed border-t border-gray-100 space-y-0.5 flex-1" id="info-${fish.id}">
+      <div class="flex items-center gap-2 text-fog-400">
+        <svg class="w-3 h-3 animate-spin text-coral-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+        載入中...
+      </div>
+    </div>
+    <div class="flex items-center gap-1.5 px-4 py-2.5 bg-gray-50 border-t border-gray-100">
+      <button class="anim-btn text-[10px] font-medium px-2.5 py-1 rounded-md bg-coral-500 text-white" data-id="${fish.id}" data-action="play">Play</button>
+      <button class="anim-btn text-[10px] font-medium px-2.5 py-1 rounded-md bg-gray-200 text-fog-300 hover:bg-gray-300" data-id="${fish.id}" data-action="pause">Pause</button>
+      <button class="anim-btn text-[10px] font-medium px-2.5 py-1 rounded-md bg-gray-200 text-fog-300 hover:bg-gray-300" data-id="${fish.id}" data-action="wireframe">Wireframe</button>
+      <button class="anim-btn text-[10px] font-medium px-2.5 py-1 rounded-md bg-gray-200 text-fog-300 hover:bg-gray-300 ml-auto" data-id="${fish.id}" data-action="reset">Reset</button>
+    </div>
+  `;
+  grid.appendChild(card);
+});
+
+const viewers = {};
+
+FISH.forEach(fish => {
+  const canvas = document.getElementById(`canvas-${fish.id}`);
+  const info = document.getElementById(`info-${fish.id}`);
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.2;
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x1e293b);
+
+  const camera = new THREE.PerspectiveCamera(40, canvas.clientWidth / canvas.clientHeight, 0.01, 100);
+  // View from front-right so we can see which way the model faces
+  camera.position.set(1.5, 1, 2.5);
+
+  const controls = new OrbitControls(camera, canvas);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.target.set(0, 0, 0);
+
+  // Underwater-style lighting
+  scene.add(new THREE.AmbientLight(0x88bbdd, 0.5));
+  const sun = new THREE.DirectionalLight(0xffeedd, 1.2);
+  sun.position.set(3, 5, 4);
+  scene.add(sun);
+  const fill = new THREE.DirectionalLight(0x4488cc, 0.4);
+  fill.position.set(-3, -2, -2);
+  scene.add(fill);
+
+  // Axis helper at origin (small, unobtrusive)
+  const axisHelper = new THREE.AxesHelper(1.2);
+  axisHelper.position.set(0, 0, 0);
+  scene.add(axisHelper);
+
+  const texBase = fish.hasTexDir
+    ? fish.url.substring(0, fish.url.lastIndexOf('/') + 1).replace(/source\/$/, '') + 'textures/'
+    : null;
+  const manager = new THREE.LoadingManager();
+  if (texBase) {
+    manager.setURLModifier(url => {
+      const filename = url.split(/[/\\]/).pop();
+      if (filename.match(/\.(png|jpg|jpeg|tga|bmp|gif)$/i)) {
+        return texBase + filename;
+      }
+      return url;
+    });
+  }
+  const loader = new FBXLoader(manager);
+
+  loader.load(fish.url, obj => {
+    // Hide helper objects but keep hierarchy for animation
+    obj.traverse(child => {
+      if (child.isLine || child.isLineSegments || child.isPoints) child.visible = false;
+    });
+
+    // Force albedo for problematic models
+    if (texBase && ALBEDO_OVERRIDES[fish.id]) {
+      const texLoader = new THREE.TextureLoader();
+      const albedoTex = texLoader.load(texBase + ALBEDO_OVERRIDES[fish.id]);
+      albedoTex.colorSpace = THREE.SRGBColorSpace;
+      obj.traverse(child => {
+        if (child.isMesh) {
+          const mats = Array.isArray(child.material) ? child.material : [child.material];
+          mats.forEach(m => {
+            if (m && !m.map) { m.map = albedoTex; m.needsUpdate = true; }
+          });
+        }
+      });
+    }
+
+    // Measure & normalize
+    const box = new THREE.Box3().setFromObject(obj);
+    const size = new THREE.Vector3(); box.getSize(size);
+    const center = new THREE.Vector3(); box.getCenter(center);
+    const maxDim = Math.max(size.x, size.y, size.z);
+
+    obj.scale.multiplyScalar(2 / maxDim);
+    obj.position.sub(center.multiplyScalar(2 / maxDim));
+
+    scene.add(obj);
+
+    // Collect info
+    let meshCount = 0, vertCount = 0, faceCount = 0;
+    let hasMaps = false;
+    const matNames = new Set();
+    obj.traverse(child => {
+      if (child.isMesh) {
+        meshCount++;
+        if (child.geometry) {
+          vertCount += child.geometry.attributes.position?.count || 0;
+          faceCount += child.geometry.index ? child.geometry.index.count / 3 : 0;
+        }
+        const mats = Array.isArray(child.material) ? child.material : [child.material];
+        mats.forEach(m => {
+          if (m) { matNames.add(m.name || m.type); if (m.map) hasMaps = true; }
+        });
+      }
+    });
+
+    const animCount = obj.animations?.length || 0;
+    let animClips = '';
+    if (animCount > 0) {
+      animClips = obj.animations.map(c => `${c.name || 'default'} (${c.duration.toFixed(1)}s)`).join(', ');
+    }
+
+    if (hasMaps) texTotal++;
+    if (animCount > 0) animTotal++;
+    document.getElementById('tex-count').textContent = texTotal;
+    document.getElementById('anim-count').textContent = animTotal;
+
+    info.innerHTML = `
+      <div class="grid grid-cols-2 gap-x-4 gap-y-0.5">
+        <div><span class="text-fog-500">原始尺寸:</span> <b class="text-fog-200">${size.x.toFixed(1)} x ${size.y.toFixed(1)} x ${size.z.toFixed(1)}</b></div>
+        <div><span class="text-fog-500">maxDim:</span> <b class="text-fog-200">${maxDim.toFixed(1)}</b></div>
+        <div><span class="text-fog-500">Mesh:</span> <b class="text-fog-200">${meshCount}</b></div>
+        <div><span class="text-fog-500">頂點:</span> <b class="text-fog-200">${vertCount.toLocaleString()}</b></div>
+        <div><span class="text-fog-500">面數:</span> <b class="text-fog-200">${faceCount.toLocaleString()}</b></div>
+        <div><span class="text-fog-500">貼圖:</span> ${hasMaps ? '<b class="text-green-500">YES</b>' : '<b class="text-red-400">NO</b>'}</div>
+        <div class="col-span-2"><span class="text-fog-500">動畫:</span> ${animCount > 0 ? `<b class="text-green-500">${animClips}</b>` : '<b class="text-red-400">NO</b>'}</div>
+      </div>
+    `;
+
+    // Animation
+    let mixer = null, action = null;
+    if (animCount > 0) {
+      mixer = new THREE.AnimationMixer(obj);
+      action = mixer.clipAction(obj.animations[0]);
+      action.play();
+    }
+
+    viewers[fish.id] = { renderer, scene, camera, controls, obj, mixer, action, wireframe: false };
+  }, undefined, err => {
+    info.innerHTML = `<div class="text-red-400 flex items-center gap-2">載入失敗: ${err.message || err}</div>`;
+  });
+
+  viewers[fish.id] = { renderer, scene, camera, controls, obj: null, mixer: null, action: null, wireframe: false };
+});
+
+// Animation loop
+const clock = new THREE.Clock();
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = clock.getDelta();
+  for (const v of Object.values(viewers)) {
+    if (v.mixer) v.mixer.update(dt);
+    v.controls.update();
+    v.renderer.render(v.scene, v.camera);
+  }
+}
+animate();
+
+// Resize
+const ro = new ResizeObserver(() => {
+  for (const v of Object.values(viewers)) {
+    const canvas = v.renderer.domElement;
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    if (canvas.width !== w || canvas.height !== h) {
+      v.renderer.setSize(w, h);
+      v.camera.aspect = w / h;
+      v.camera.updateProjectionMatrix();
+    }
+  }
+});
+document.querySelectorAll('.card-canvas').forEach(c => ro.observe(c));
+
+// Button controls
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.anim-btn');
+  if (!btn) return;
+  const id = btn.dataset.id;
+  const act = btn.dataset.action;
+  const v = viewers[id];
+  if (!v) return;
+
+  if (act === 'play' && v.action) { v.action.paused = false; v.action.play(); }
+  else if (act === 'pause' && v.action) { v.action.paused = true; }
+  else if (act === 'wireframe' && v.obj) {
+    v.wireframe = !v.wireframe;
+    v.obj.traverse(child => {
+      if (child.isMesh) {
+        const mats = Array.isArray(child.material) ? child.material : [child.material];
+        mats.forEach(m => { if (m) m.wireframe = v.wireframe; });
+      }
+    });
+  } else if (act === 'reset') {
+    v.camera.position.set(1.5, 1, 2.5);
+    v.controls.target.set(0, 0, 0);
+    v.controls.update();
+  }
+
+  // Update button styles
+  const siblings = btn.parentElement.querySelectorAll('.anim-btn');
+  if (act === 'play' || act === 'pause') {
+    siblings.forEach(b => {
+      if (b.dataset.action === 'play' || b.dataset.action === 'pause') {
+        const isActive = b === btn;
+        b.className = `anim-btn text-[10px] font-medium px-2.5 py-1 rounded-md ${isActive ? 'bg-coral-500 text-white' : 'bg-gray-200 text-fog-300 hover:bg-gray-300'}`;
+      }
+    });
+  } else if (act === 'wireframe') {
+    btn.className = `anim-btn text-[10px] font-medium px-2.5 py-1 rounded-md ${v.wireframe ? 'bg-coral-500 text-white' : 'bg-gray-200 text-fog-300 hover:bg-gray-300'}`;
+  }
+});
+</script>
+</body>
+</html>

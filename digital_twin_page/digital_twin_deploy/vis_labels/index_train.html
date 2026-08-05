@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>珊瑚分割資料集 · train</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🪸</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink-950:#f8fafc; --ink-900:#f1f5f9; --ink-800:#e2e8f0; --ink-700:#cbd5e1; --ink-600:#94a3b8;
+    --fog-100:#1e293b; --fog-200:#334155; --fog-300:#475569; --fog-400:#64748b;
+    --coral-400:#fb923c; --coral-500:#f97316; --coral-600:#ea580c;
+    --shadow-card:0 1px 3px rgba(0,0,0,.08), 0 4px 12px -4px rgba(0,0,0,.12);
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--ink-950); color:var(--fog-100);
+         font-family:'Inter',system-ui,-apple-system,'Noto Sans TC',sans-serif; font-size:13px; }
+  header { position:sticky; top:0; z-index:30; display:flex; align-items:center; gap:14px;
+            padding:12px 20px; background:rgba(248,250,252,.9); backdrop-filter:blur(8px);
+            border-bottom:1px solid var(--ink-800); }
+  .logo { width:36px; height:36px; border-radius:9px; display:flex; align-items:center;
+           justify-content:center; font-size:26px; line-height:1; user-select:none; }
+  h1 { margin:0; font-size:15px; font-weight:600; letter-spacing:-.01em; }
+  .sub { font-size:11px; color:var(--fog-400); }
+  .badge { font-size:10px; padding:2px 7px; border-radius:999px; border:1px solid var(--ink-700);
+            color:var(--fog-400); background:#fff; }
+  .navlink { font-size:11px; padding:5px 10px; border-radius:8px; border:1px solid var(--ink-800);
+             color:var(--fog-300); background:#fff; text-decoration:none; white-space:nowrap;
+             transition:border-color .15s, color .15s; }
+  .navlink:hover { border-color:var(--coral-400); color:var(--coral-600); }
+  main { max-width:1440px; margin:0 auto; padding:18px 20px 60px; }
+  section { margin-bottom:16px; }
+  .card { background:#fff; border:1px solid var(--ink-800); border-radius:12px; box-shadow:var(--shadow-card); }
+  .card-h { padding:11px 14px; border-bottom:1px solid var(--ink-800); display:flex;
+             align-items:center; justify-content:space-between; }
+  .card-h h2 { margin:0; font-size:12px; font-weight:600; letter-spacing:.02em; }
+  .card-h .note { font-size:11px; color:var(--fog-400); }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; }
+  .stat { background:#fff; border:1px solid var(--ink-800); border-radius:12px; padding:13px 15px;
+           box-shadow:var(--shadow-card); }
+  .stat .k { font-size:11px; color:var(--fog-400); margin-bottom:5px; }
+  .stat .v { font-size:24px; font-weight:700; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
+  .stat .u { font-size:11px; color:var(--fog-400); font-weight:500; margin-left:3px; }
+  .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:7px;
+          vertical-align:middle; }
+  .toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:11px 14px; }
+  input[type=search], select { font:inherit; font-size:12px; padding:6px 10px; border-radius:8px;
+    border:1px solid var(--ink-700); background:#fff; color:var(--fog-100); outline:none; }
+  input[type=search] { min-width:190px; }
+  input[type=search]:focus, select:focus { border-color:var(--coral-400);
+    box-shadow:0 0 0 3px rgba(249,115,22,.12); }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; padding:0 14px 12px; }
+  .chip { font:inherit; font-size:11px; display:inline-flex; align-items:center; gap:0;
+           padding:4px 9px; border-radius:999px; border:1px solid var(--ink-700);
+           background:#fff; color:var(--fog-300); cursor:pointer; transition:.12s; }
+  .chip b { margin-left:6px; font-variant-numeric:tabular-nums; color:var(--fog-400); font-weight:600; }
+  .chip:hover:not(:disabled) { border-color:var(--coral-400); color:var(--fog-100); }
+  .chip.on { background:var(--fog-100); border-color:var(--fog-100); color:#fff; }
+  .chip.on b { color:var(--ink-700); }
+  .chip:disabled { opacity:.4; cursor:not-allowed; text-decoration:line-through; }
+
+  /* 圖片直接鋪排：無圓角、緊貼、單列多張 */
+  .gallery { display:grid; gap:2px; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); }
+  .item { position:relative; margin:0; overflow:hidden; cursor:zoom-in;
+           background:var(--ink-900); line-height:0; transition:.14s; }
+  .item img { display:block; width:100%; aspect-ratio:16/9; object-fit:cover; }
+  .item:hover { outline:2px solid var(--coral-400); outline-offset:-2px; z-index:1; }
+  .item figcaption { position:absolute; left:0; right:0; bottom:0; display:flex; gap:8px;
+    align-items:center; justify-content:space-between; padding:16px 10px 7px; line-height:1.3;
+    color:#fff; font-size:11.5px; font-variant-numeric:tabular-nums;
+    background:linear-gradient(to top,rgba(15,23,42,.85),rgba(15,23,42,0));
+    opacity:0; transition:.14s; }
+  .item:hover figcaption { opacity:1; }
+  .item figcaption .n { white-space:nowrap; color:var(--ink-700); }
+  .empty { padding:44px; text-align:center; color:var(--fog-400); font-size:12px; }
+
+  dialog { border:0; padding:0; background:transparent; max-width:96vw; max-height:96vh; }
+  dialog::backdrop { background:rgba(15,23,42,.82); backdrop-filter:blur(3px); }
+  .lb { background:#fff; border-radius:13px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.4); }
+  .lb img { display:block; max-width:92vw; max-height:78vh; object-fit:contain; background:#0f172a; }
+  .lb .bar2 { display:flex; align-items:center; justify-content:space-between; gap:14px;
+               padding:10px 14px; border-top:1px solid var(--ink-800); }
+  .lb .cls { display:flex; flex-wrap:wrap; gap:5px; }
+  .lb .cls span { font-size:10.5px; padding:2px 8px; border-radius:999px; border:1px solid var(--ink-800);
+                   background:var(--ink-950); }
+  .lb button { font:inherit; font-size:12px; padding:5px 12px; border-radius:8px; cursor:pointer;
+                border:1px solid var(--ink-700); background:#fff; color:var(--fog-200); }
+  .lb button:hover { border-color:var(--coral-400); color:var(--fog-100); }
+  footer { text-align:center; font-size:11px; color:var(--fog-400); padding:22px 0 6px; }
+</style>
+</head>
+<body>
+<header>
+  <span class="logo" role="img" aria-label="珊瑚分割資料集">🪸</span>
+  <div style="flex:1">
+    <h1>珊瑚分割資料集 · 標記瀏覽</h1>
+  </div>
+  <a href="../index.html" class="navlink">← 3D 檢視</a>
+  <a href="../environment.html" class="navlink">環境監測</a>
+  <a href="../growth_simulator.html" class="navlink">成長情境模擬</a>
+</header>
+
+<main>
+  <section class="stats">
+    <div class="stat"><div class="k">標記影像張數</div><div class="v">1290<span class="u"> 張</span></div></div>
+    <div class="stat"><div class="k">原始影像總數</div><div class="v">5320<span class="u"> 張</span></div></div>
+  </section>
+
+  <section class="card">
+    <div class="card-h"><h2>篩選</h2><span class="note" id="count-note"></span></div>
+    <div class="toolbar">
+      <input type="search" id="q" placeholder="搜尋檔名，例如 0042">
+      <select id="sort">
+        <option value="id">依檔名排序</option>
+        <option value="total-desc">標記數：多 → 少</option>
+        <option value="total-asc">標記數：少 → 多</option>
+      </select>
+      <select id="mode">
+        <option value="or">符合任一類別</option>
+        <option value="and">需同時含全部所選</option>
+      </select>
+      <button class="chip" id="clear">清除篩選</button>
+    </div>
+    <div class="chips"><button class="chip" data-cls="0" ><span class="dot" style="background:#FF3838"></span>Acropora<b>114</b></button>
+<button class="chip" data-cls="1" ><span class="dot" style="background:#FF9D97"></span>Euphyllia<b></b></button>
+<button class="chip" data-cls="2" ><span class="dot" style="background:#FF701F"></span>Pocillopora<b></b></button>
+<button class="chip" data-cls="3" ><span class="dot" style="background:#FFB21D"></span>Stylophora<b></b></button>
+<button class="chip" data-cls="4" ><span class="dot" style="background:#CFD231"></span>Montipora<b></b></button>
+<button class="chip" data-cls="5" ><span class="dot" style="background:#48F90A"></span>Favites<b></b></button>
+<button class="chip" data-cls="6" ><span class="dot" style="background:#92CC17"></span>Fungia<b></b></button>
+<button class="chip" data-cls="7" ><span class="dot" style="background:#3DDB86"></span>Pavona<b></b></button>
+<button class="chip" data-cls="8" ><span class="dot" style="background:#1A9334"></span>Amphiprion biaculeatus<b></b></button>
+<button class="chip" data-cls="9" ><span class="dot" style="background:#00D4BB"></span>Amphiprion clarkia<b></b></button>
+<button class="chip" data-cls="10" ><span class="dot" style="background:#2C99A8"></span>Amphiprion ocellaris<b></b></button></div>
+  </section>
+
+  <section>
+    <div class="gallery" id="gallery"></div>
+    <div class="empty" id="empty" hidden>沒有符合條件的影像</div>
+  </section>
+
+  <footer>CIHCI Lab · 由 make_label_gallery.py 產生</footer>
+</main>
+
+<dialog id="lb"><div class="lb">
+  <img id="lb-img" alt="">
+  <div class="bar2">
+    <div>
+      <div style="font-weight:600" id="lb-id"></div>
+      <div class="cls" id="lb-cls" style="margin-top:5px"></div>
+    </div>
+    <div style="display:flex;gap:6px;white-space:nowrap">
+      <button id="prev">← 上一張</button><button id="next">下一張 →</button><button id="close">關閉</button>
+    </div>
+  </div>
+</div></dialog>
+
+<script>
+const DATA = {"records":[{"id":"frame_0001","full":"train/frame_0001_vis.jpg","thumb":"_thumbs_train/frame_0001.jpg","counts":{"0":4,"2":1,"7":1,"5":1},"total":7},{"id":"frame_0002","full":"train/frame_0002_vis.jpg","thumb":"_thumbs_train/frame_0002.jpg","counts":{"0":4,"2":1,"7":1,"5":1},"total":7},{"id":"frame_0004","full":"train/frame_0004_vis.jpg","thumb":"_thumbs_train/frame_0004.jpg","counts":{"0":4,"2":1,"7":1,"5":1},"total":7},{"id":"frame_0005","full":"train/frame_0005_vis.jpg","thumb":"_thumbs_train/frame_0005.jpg","counts":{"0":4,"2":1,"7":1,"5":1},"total":7},{"id":"frame_0006","full":"train/frame_0006_vis.jpg","thumb":"_thumbs_train/frame_0006.jpg","counts":{"0":4,"2":1,"7":1,"5":1},"total":7},{"id":"frame_0007","full":"train/frame_0007_vis.jpg","thumb":"_thumbs_train/frame_0007.jpg","counts":{"2":1,"0":4,"7":1,"5":1},"total":7},{"id":"frame_0008","full":"train/frame_0008_vis.jpg","thumb":"_thumbs_train/frame_0008.jpg","counts":{"0":4,"2":1,"7":1,"5":1},"total":7},{"id":"frame_0009","full":"train/frame_0009_vis.jpg","thumb":"_thumbs_train/frame_0009.jpg","counts":{"2":1,"0":2,"5":1},"total":4},{"id":"frame_0010","full":"train/frame_0010_vis.jpg","thumb":"_thumbs_train/frame_0010.jpg","counts":{"2":1,"0":2,"3":1,"1":1,"5":1},"total":6},{"id":"frame_0011","full":"train/frame_0011_vis.jpg","thumb":"_thumbs_train/frame_0011.jpg","counts":{"1":2,"5":1,"0":3,"2":1,"3":1},"total":8},{"id":"frame_0012","full":"train/frame_0012_vis.jpg","thumb":"_thumbs_train/frame_0012.jpg","counts":{"1":2,"3":1,"0":1,"8":2,"10":1,"5":1},"total":8},{"id":"frame_0013","full":"train/frame_0013_vis.jpg","thumb":"_thumbs_train/frame_0013.jpg","counts":{"1":2,"3":1,"0":1,"8":3,"10":2,"5":1},"total":10},{"id":"frame_0014","full":"train/frame_0014_vis.jpg","thumb":"_thumbs_train/frame_0014.jpg","counts":{"3":1,"1":3,"4":1,"10":2,"8":2,"5":1},"total":10},{"id":"frame_0015","full":"train/frame_0015_vis.jpg","thumb":"_thumbs_train/frame_0015.jpg","counts":{"4":1,"1":3,"3":1,"10":2,"8":2,"5":1},"total":10},{"id":"frame_0016","full":"train/frame_0016_vis.jpg","thumb":"_thumbs_train/frame_0016.jpg","counts":{"4":1,"1":2,"5":1,"3":1,"10":1,"9":3,"8":1},"total":10},{"id":"frame_0017","full":"train/frame_0017_vis.jpg","thumb":"_thumbs_train/frame_0017.jpg","counts":{"3":1,"1":2,"4":1,"9":1,"10":2},"total":7},{"id":"frame_0018","full":"train/frame_0018_vis.jpg","thumb":"_thumbs_train/frame_0018.jpg","counts":{"4":1,"1":2,"3":1,"8":1,"10":3},"total":8},{"id":"frame_0019","full":"train/frame_0019_vis.jpg","thumb":"_thumbs_train/frame_0019.jpg","counts":{"3":1,"1":2,"4":1,"9":2,"8":1,"10":3},"total":10},{"id":"frame_0020","full":"train/frame_0020_vis.jpg","thumb":"_thumbs_train/frame_0020.jpg","counts":{"4":1,"3":1,"1":1,"9":1,"10":4},"total":8},{"id":"frame_0021","full":"train/frame_0021_vis.jpg","thumb":"_thumbs_train/frame_0021.jpg","counts":{"4":1,"3":1,"1":3,"10":3,"9":4},"total":12},{"id":"frame_0022","full":"train/frame_0022_vis.jpg","thumb":"_thumbs_train/frame_0022.jpg","counts":{"4":1,"3":1,"1":1,"9":2,"10":4},"total":9},{"id":"frame_0023","full":"train/frame_0023_vis.jpg","thumb":"_thumbs_train/frame_0023.jpg","counts":{"4":1,"3":1,"1":1,"9":3,"10":1,"5":1},"total":8},{"id":"frame_0024","full":"train/frame_0024_vis.jpg","thumb":"_thumbs_train/frame_0024.jpg","counts":{"4":1,"3":1,"0":1,"5":1},"total":4},{"id":"frame_0025","full":"train/frame_0025_vis.jpg","thumb":"_thumbs_train/frame_0025.jpg","counts":{"4":1,"3":1,"0":1,"5":1},"total":4},{"id":"frame_0026","full":"train/frame_0026_vis.jpg","thumb":"_thumbs_train/frame_0026.jpg","counts":{"3":1,"0":3,"2":1,"5":1},"total":6},{"id":"frame_0027","full":"train/frame_0027_vis.jpg","thumb":"_thumbs_train/frame_0027.jpg","counts":{"3":1,"2":1,"0":3,"5":1},"total":6},{"id":"frame_0028","full":"train/frame_0028_vis.jpg","thumb":"_thumbs_train/frame_0028.jpg","counts":{"3":1,"0":3,"2":1,"5":1},"total":6},{"id":"frame_0029","full":"train/frame_0029_vis.jpg","thumb":"_thumbs_train/frame_0029.jpg","counts":{"3":1,"2":1,"0":4,"5":1},"total":7},{"id":"frame_0030","full":"train/frame_0030_vis.jpg","thumb":"_thumbs_train/frame_0030.jpg","counts":{"0":4,"2":1,"5":1},"total":6},{"id":"frame_0031","full":"train/frame_0031_vis.jpg","thumb":"_thumbs_train/frame_0031.jpg","counts":{"0":4,"2":1,"5":1},"total":6},{"id":"frame_0032","full":"train/frame_0032_vis.jpg","thumb":"_thumbs_train/frame_0032.jpg","counts":{"0":4,"5":1},"total":5},{"id":"frame_0033","full":"train/frame_0033_vis.jpg","thumb":"_thumbs_train/frame_0033.jpg","counts":{"0":3,"3":1,"5":1},"total":5},{"id":"frame_0034","full":"train/frame_0034_vis.jpg","thumb":"_thumbs_train/frame_0034.jpg","counts":{"3":1,"0":3,"5":1},"total":5},{"id":"frame_0035","full":"train/frame_0035_vis.jpg","thumb":"_thumbs_train/frame_0035.jpg","counts":{"3":1,"0":2,"2":1,"5":1},"total":5},{"id":"frame_0036","full":"train/frame_0036_vis.jpg","thumb":"_thumbs_train/frame_0036.jpg","counts":{"5":1,"3":1,"0":2,"4":1},"total":5},{"id":"frame_0037","full":"train/frame_0037_vis.jpg","thumb":"_thumbs_train/frame_0037.jpg","counts":{"3":1,"4":1,"0":1,"5":1},"total":4},{"id":"frame_0038","full":"train/frame_0038_vis.jpg","thumb":"_thumbs_train/frame_0038.jpg","counts":{"3":1,"4":1,"1":1},"total":3},{"id":"frame_0039","full":"train/frame_0039_vis.jpg","thumb":"_thumbs_train/frame_0039.jpg","counts":{"3":1,"4":1,"1":1,"10":2},"total":5},{"id":"frame_0040","full":"train/frame_0040_vis.jpg","thumb":"_thumbs_train/frame_0040.jpg","counts":{"3":1,"1":2,"4":1,"10":4},"total":8},{"id":"frame_0041","full":"train/frame_0041_vis.jpg","thumb":"_thumbs_train/frame_0041.jpg","counts":{"3":1,"4":1,"1":2,"10":3},"total":7},{"id":"frame_0042","full":"train/frame_0042_vis.jpg","thumb":"_thumbs_train/frame_0042.jpg","counts":{"3":1,"1":2,"4":1,"10":3},"total":7},{"id":"frame_0043","full":"train/frame_0043_vis.jpg","thumb":"_thumbs_train/frame_0043.jpg","counts":{"3":1,"1":3,"4":1,"10":3},"total":8},{"id":"frame_0044","full":"train/frame_0044_vis.jpg","thumb":"_thumbs_train/frame_0044.jpg","counts":{"3":1,"4":1,"1":3,"10":3},"total":8},{"id":"frame_0045","full":"train/frame_0045_vis.jpg","thumb":"_thumbs_train/frame_0045.jpg","counts":{"3":1,"1":3,"4":1,"10":4},"total":9},{"id":"frame_0046","full":"train/frame_0046_vis.jpg","thumb":"_thumbs_train/frame_0046.jpg","counts":{"3":1,"1":2,"4":1,"10":3},"total":7},{"id":"frame_0047","full":"train/frame_0047_vis.jpg","thumb":"_thumbs_train/frame_0047.jpg","counts":{"3":1,"1":1,"4":1,"10":4,"9":1},"total":8},{"id":"frame_0048","full":"train/frame_0048_vis.jpg","thumb":"_thumbs_train/frame_0048.jpg","counts":{"3":1,"4":1,"1":1,"10":5,"5":1},"total":9},{"id":"frame_0049","full":"train/frame_0049_vis.jpg","thumb":"_thumbs_train/frame_0049.jpg","counts":{"4":1,"1":1,"3":1,"10":5,"9":2,"5":1},"total":11},{"id":"frame_0050","full":"train/frame_0050_vis.jpg","thumb":"_thumbs_train/frame_0050.jpg","counts":{"4":1,"1":3,"0":1,"10":2,"9":1,"3":1,"5":1},"total":10},{"id":"frame_0051","full":"train/frame_0051_vis.jpg","thumb":"_thumbs_train/frame_0051.jpg","counts":{"3":1,"0":1,"1":3,"4":1,"10":3,"9":1,"5":1},"total":11},{"id":"frame_0052","full":"train/frame_0052_vis.jpg","thumb":"_thumbs_train/frame_0052.jpg","counts":{"3":1,"1":3,"4":1,"0":1,"8":2,"10":7,"5":1},"total":16},{"id":"frame_0053","full":"train/frame_0053_vis.jpg","thumb":"_thumbs_train/frame_0053.jpg","counts":{"3":1,"1":3,"4":1,"0":1,"8":1,"9":2,"10":6,"5":1},"total":16},{"id":"frame_0054","full":"train/frame_0054_vis.jpg","thumb":"_thumbs_train/frame_0054.jpg","counts":{"3":1,"1":2,"5":1,"0":1,"4":1,"8":1,"9":2,"10":8},"total":17},{"id":"frame_0055","full":"train/frame_0055_vis.jpg","thumb":"_thumbs_train/frame_0055.jpg","counts":{"3":1,"1":2,"4":1,"10":9,"9":2,"8":1,"0":1,"5":1},"total":18},{"id":"frame_0056","full":"train/frame_0056_vis.jpg","thumb":"_thumbs_train/frame_0056.jpg","counts":{"3":1,"1":2,"4":1,"8":2,"10":8,"9":1,"0":1,"5":1},"total":17},{"id":"frame_0057","full":"train/frame_0057_vis.jpg","thumb":"_thumbs_train/frame_0057.jpg","counts":{"3":1,"1":3,"5":1,"4":1,"8":1,"10":9,"9":2},"total":18},{"id":"frame_0058","full":"train/frame_0058_vis.jpg","thumb":"_thumbs_train/frame_0058.jpg","counts":{"3":1,"1":3,"5":1,"4":1,"10":6,"8":1,"9":1},"total":14},{"id":"frame_0059","full":"train/frame_0059_vis.jpg","thumb":"_thumbs_train/frame_0059.jpg","counts":{"3":1,"1":3,"4":1,"10":3,"9":3,"8":1,"5":1},"total":13},{"id":"frame_0060","full":"train/frame_0060_vis.jpg","thumb":"_thumbs_train/frame_0060.jpg","counts":{"3":1,"1":3,"5":1,"4":1},"total":6},{"id":"frame_0061","full":"train/frame_0061_vis.jpg","thumb":"_thumbs_train/frame_0061.jpg","counts":{"3":1,"1":3,"5":1,"4":1,"10":5,"0":1,"9":1,"8":2},"total":15},{"id":"frame_0062","full":"train/frame_0062_vis.jpg","thumb":"_thumbs_train/frame_0062.jpg","counts":{"3":1,"1":3,"4":1,"10":6,"9":3},"total":14},{"id":"frame_0063","full":"train/frame_0063_vis.jpg","thumb":"_thumbs_train/frame_0063.jpg","counts":{"3":1,"1":3,"4":1,"10":7,"9":4,"8":1},"total":17},{"id":"frame_0064","full":"train/frame_0064_vis.jpg","thumb":"_thumbs_train/frame_0064.jpg","counts":{"4":1,"9":3,"8":2,"10":8,"1":1},"total":15},{"id":"frame_0066","full":"train/frame_0066_vis.jpg","thumb":"_thumbs_train/frame_0066.jpg","counts":{"4":1,"1":3,"10":8,"8":2,"9":1},"total":15},{"id":"frame_0067","full":"train/frame_0067_vis.jpg","thumb":"_thumbs_train/frame_0067.jpg","counts":{"1":3,"3":1,"4":1,"9":3,"10":12},"total":20},{"id":"frame_0068","full":"train/frame_0068_vis.jpg","thumb":"_thumbs_train/frame_0068.jpg","counts":{"1":3,"3":1,"4":1,"9":4,"10":12,"8":1},"total":22},{"id":"frame_0069","full":"train/frame_0069_vis.jpg","thumb":"_thumbs_train/frame_0069.jpg","counts":{"1":3,"4":1,"3":1,"10":10,"9":3},"total":18},{"id":"frame_0070","full":"train/frame_0070_vis.jpg","thumb":"_thumbs_train/frame_0070.jpg","counts":{"1":3,"4":1,"3":1,"5":1,"10":8,"9":3,"8":1},"total":18},{"id":"frame_0071","full":"train/frame_0071_vis.jpg","thumb":"_thumbs_train/frame_0071.jpg","counts":{"1":3,"4":1,"3":1,"5":1,"10":6,"8":2},"total":14},{"id":"frame_0072","full":"train/frame_0072_vis.jpg","thumb":"_thumbs_train/frame_0072.jpg","counts":{"1":2,"4":1,"3":1,"5":1,"10":3,"9":1},"total":9},{"id":"frame_0073","full":"train/frame_0073_vis.jpg","thumb":"_thumbs_train/frame_0073.jpg","counts":{"1":2,"4":1,"3":1,"5":1,"0":1,"7":1,"10":2,"2":1},"total":10},{"id":"frame_0074","full":"train/frame_0074_vis.jpg","thumb":"_thumbs_train/frame_0074.jpg","counts":{"1":2,"4":1,"3":1,"5":1,"7":1,"0":2,"2":1},"total":9},{"id":"frame_0075","full":"train/frame_0075_vis.jpg","thumb":"_thumbs_train/frame_0075.jpg","counts":{"1":2,"4":1,"3":1,"5":1,"0":2,"7":1,"2":1,"10":1},"total":10},{"id":"frame_0076","full":"train/frame_0076_vis.jpg","thumb":"_thumbs_train/frame_0076.jpg","counts":{"1":2,"4":1,"3":1,"5":1,"7":1,"0":2,"2":1},"total":9},{"id":"frame_0077","full":"train/frame_0077_vis.jpg","thumb":"_thumbs_train/frame_0077.jpg","counts":{"3":1,"10":1},"total":2},{"id":"frame_0078","full":"train/frame_0078_vis.jpg","thumb":"_thumbs_train/frame_0078.jpg","counts":{"3":1,"10":2},"total":3},{"id":"frame_0079","full":"train/frame_0079_vis.jpg","thumb":"_thumbs_train/frame_0079.jpg","counts":{"3":1,"4":1,"10":2},"total":4},{"id":"frame_0080","full":"train/frame_0080_vis.jpg","thumb":"_thumbs_train/frame_0080.jpg","counts":{"4":1,"3":1,"1":1},"total":3},{"id":"frame_0081","full":"train/frame_0081_vis.jpg","thumb":"_thumbs_train/frame_0081.jpg","counts":{"3":1,"4":1,"1":3,"10":2,"9":1},"total":8},{"id":"frame_0082","full":"train/frame_0082_vis.jpg","thumb":"_thumbs_train/frame_0082.jpg","counts":{"1":3,"4":1,"3":1,"9":1,"10":2},"total":8},{"id":"frame_0083","full":"train/frame_0083_vis.jpg","thumb":"_thumbs_train/frame_0083.jpg","counts":{"4":1,"1":3,"8":4,"9":1},"total":9},{"id":"frame_0084","full":"train/frame_0084_vis.jpg","thumb":"_thumbs_train/frame_0084.jpg","counts":{"1":2,"4":1,"10":2,"9":1,"8":1},"total":7},{"id":"frame_0085","full":"train/frame_0085_vis.jpg","thumb":"_thumbs_train/frame_0085.jpg","counts":{"1":2,"4":1,"10":2,"9":1},"total":6},{"id":"frame_0086","full":"train/frame_0086_vis.jpg","thumb":"_thumbs_train/frame_0086.jpg","counts":{"4":1,"1":2,"10":2,"8":1,"9":1},"total":7},{"id":"frame_0087","full":"train/frame_0087_vis.jpg","thumb":"_thumbs_train/frame_0087.jpg","counts":{"1":1,"4":1,"3":1,"10":2,"9":1,"8":1},"total":7},{"id":"frame_0088","full":"train/frame_0088_vis.jpg","thumb":"_thumbs_train/frame_0088.jpg","counts":{"3":1,"5":1,"1":1,"8":2,"10":2},"total":7},{"id":"frame_0089","full":"train/frame_0089_vis.jpg","thumb":"_thumbs_train/frame_0089.jpg","counts":{"3":1,"1":2,"5":1},"total":4},{"id":"frame_0090","full":"train/frame_0090_vis.jpg","thumb":"_thumbs_train/frame_0090.jpg","counts":{"1":2,"3":1,"5":1},"total":4},{"id":"frame_0091","full":"train/frame_0091_vis.jpg","thumb":"_thumbs_train/frame_0091.jpg","counts":{"1":2,"3":1,"5":1},"total":4},{"id":"frame_0092","full":"train/frame_0092_vis.jpg","thumb":"_thumbs_train/frame_0092.jpg","counts":{"1":1,"3":1,"0":1,"5":1},"total":4},{"id":"frame_0093","full":"train/frame_0093_vis.jpg","thumb":"_thumbs_train/frame_0093.jpg","counts":{"0":1,"2":1,"5":1},"total":3},{"id":"frame_0094","full":"train/frame_0094_vis.jpg","thumb":"_thumbs_train/frame_0094.jpg","counts":{"2":1,"0":2,"5":1},"total":4},{"id":"frame_0095","full":"train/frame_0095_vis.jpg","thumb":"_thumbs_train/frame_0095.jpg","counts":{"2":1,"0":2,"5":1},"total":4},{"id":"frame_0096","full":"train/frame_0096_vis.jpg","thumb":"_thumbs_train/frame_0096.jpg","counts":{"5":1,"0":3,"2":1},"total":5},{"id":"frame_0097","full":"train/frame_0097_vis.jpg","thumb":"_thumbs_train/frame_0097.jpg","counts":{"2":1,"0":3,"5":1},"total":5},{"id":"frame_0098","full":"train/frame_0098_vis.jpg","thumb":"_thumbs_train/frame_0098.jpg","counts":{"2":1,"5":1,"0":3,"7":1},"total":6},{"id":"frame_0099","full":"train/frame_0099_vis.jpg","thumb":"_thumbs_train/frame_0099.jpg","counts":{"0":3,"2":1,"5":1,"7":1},"total":6},{"id":"frame_0100","full":"train/frame_0100_vis.jpg","thumb":"_thumbs_train/frame_0100.jpg","counts":{"5":1,"2":1,"0":3,"7":1},"total":6},{"id":"frame_0101","full":"train/frame_0101_vis.jpg","thumb":"_thumbs_train/frame_0101.jpg","counts":{"5":1,"2":1,"7":1,"0":1},"total":4},{"id":"frame_0102","full":"train/frame_0102_vis.jpg","thumb":"_thumbs_train/frame_0102.jpg","counts":{"5":1,"2":1,"0":1,"7":1},"total":4},{"id":"frame_0103","full":"train/frame_0103_vis.jpg","thumb":"_thumbs_train/frame_0103.jpg","counts":{"5":1,"7":1,"0":1},"total":3},{"id":"frame_0104","full":"train/frame_0104_vis.jpg","thumb":"_thumbs_train/frame_0104.jpg","counts":{"5":1,"1":1,"7":1},"total":3},{"id":"frame_0105","full":"train/frame_0105_vis.jpg","thumb":"_thumbs_train/frame_0105.jpg","counts":{"5":1,"1":1},"total":2},{"id":"frame_0106","full":"train/frame_0106_vis.jpg","thumb":"_thumbs_train/frame_0106.jpg","counts":{"5":1,"1":2},"total":3},{"id":"frame_0107","full":"train/frame_0107_vis.jpg","thumb":"_thumbs_train/frame_0107.jpg","counts":{"5":1,"1":2,"3":1},"total":4},{"id":"frame_0108","full":"train/frame_0108_vis.jpg","thumb":"_thumbs_train/frame_0108.jpg","counts":{"5":1,"1":2,"3":1,"9":3},"total":7},{"id":"frame_0109","full":"train/frame_0109_vis.jpg","thumb":"_thumbs_train/frame_0109.jpg","counts":{"5":1,"1":2,"3":1,"8":3,"10":1},"total":8},{"id":"frame_0110","full":"train/frame_0110_vis.jpg","thumb":"_thumbs_train/frame_0110.jpg","counts":{"1":2,"3":1,"8":3,"9":1,"10":1},"total":8},{"id":"frame_0111","full":"train/frame_0111_vis.jpg","thumb":"_thumbs_train/frame_0111.jpg","counts":{"1":2,"3":1,"4":1,"8":2,"10":2},"total":8},{"id":"frame_0112","full":"train/frame_0112_vis.jpg","thumb":"_thumbs_train/frame_0112.jpg","counts":{"1":2,"4":1,"10":5},"total":8},{"id":"frame_0113","full":"train/frame_0113_vis.jpg","thumb":"_thumbs_train/frame_0113.jpg","counts":{"1":2,"4":1},"total":3},{"id":"frame_0114","full":"train/frame_0114_vis.jpg","thumb":"_thumbs_train/frame_0114.jpg","counts":{"4":1,"1":2},"total":3},{"id":"frame_0115","full":"train/frame_0115_vis.jpg","thumb":"_thumbs_train/frame_0115.jpg","counts":{"1":1,"4":1,"10":4,"9":5},"total":11},{"id":"frame_0116","full":"train/frame_0116_vis.jpg","thumb":"_thumbs_train/frame_0116.jpg","counts":{"4":1,"10":7,"9":2},"total":10},{"id":"frame_0117","full":"train/frame_0117_vis.jpg","thumb":"_thumbs_train/frame_0117.jpg","counts":{"4":1,"10":7,"9":2,"8":1},"total":11},{"id":"frame_0118","full":"train/frame_0118_vis.jpg","thumb":"_thumbs_train/frame_0118.jpg","counts":{"4":1,"10":7,"8":3,"9":2},"total":13},{"id":"frame_0119","full":"train/frame_0119_vis.jpg","thumb":"_thumbs_train/frame_0119.jpg","counts":{"4":1,"8":1,"9":2},"total":4},{"id":"frame_0120","full":"train/frame_0120_vis.jpg","thumb":"_thumbs_train/frame_0120.jpg","counts":{"4":1,"10":6,"9":5,"8":2},"total":14},{"id":"frame_0121","full":"train/frame_0121_vis.jpg","thumb":"_thumbs_train/frame_0121.jpg","counts":{"4":1,"9":5,"10":6},"total":12},{"id":"frame_0122","full":"train/frame_0122_vis.jpg","thumb":"_thumbs_train/frame_0122.jpg","counts":{"4":1,"10":6,"9":4},"total":11},{"id":"frame_0123","full":"train/frame_0123_vis.jpg","thumb":"_thumbs_train/frame_0123.jpg","counts":{"4":1,"10":4,"9":5,"8":2},"total":12},{"id":"frame_0124","full":"train/frame_0124_vis.jpg","thumb":"_thumbs_train/frame_0124.jpg","counts":{"4":1,"10":6,"9":2,"8":2},"total":11},{"id":"frame_0125","full":"train/frame_0125_vis.jpg","thumb":"_thumbs_train/frame_0125.jpg","counts":{"4":1,"9":6,"10":3,"8":1},"total":11},{"id":"frame_0126","full":"train/frame_0126_vis.jpg","thumb":"_thumbs_train/frame_0126.jpg","counts":{"10":5,"8":1,"9":4},"total":10},{"id":"frame_0128","full":"train/frame_0128_vis.jpg","thumb":"_thumbs_train/frame_0128.jpg","counts":{"10":3,"9":4},"total":7},{"id":"frame_0129","full":"train/frame_0129_vis.jpg","thumb":"_thumbs_train/frame_0129.jpg","counts":{"1":1,"10":2,"9":1},"total":4},{"id":"frame_0130","full":"train/frame_0130_vis.jpg","thumb":"_thumbs_train/frame_0130.jpg","counts":{"1":1,"10":1,"9":2},"total":4},{"id":"frame_0131","full":"train/frame_0131_vis.jpg","thumb":"_thumbs_train/frame_0131.jpg","counts":{"1":1,"10":1},"total":2},{"id":"frame_0132","full":"train/frame_0132_vis.jpg","thumb":"_thumbs_train/frame_0132.jpg","counts":{"1":1},"total":1}],"classes":[{"id":0,"name":"Acropora","color":"#FF3838","group":"coral","inst":114,"imgs":50},{"id":1,"name":"Euphyllia","color":"#FF9D97","group":"coral","inst":167,"imgs":81},{"id":2,"name":"Pocillopora","color":"#FF701F","group":"coral","inst":31,"imgs":31},{"id":3,"name":"Stylophora","color":"#FFB21D","group":"coral","inst":78,"imgs":78},{"id":4,"name":"Montipora","color":"#CFD231","group":"coral","inst":76,"imgs":76},{"id":5,"name":"Favites","color":"#48F90A","group":"coral","inst":73,"imgs":73},{"id":6,"name":"Fungia","color":"#92CC17","group":"coral","inst":0,"imgs":0},{"id":7,"name":"Pavona","color":"#3DDB86","group":"coral","inst":18,"imgs":18},{"id":8,"name":"Amphiprion biaculeatus","color":"#1A9334","group":"fish","inst":63,"imgs":38},{"id":9,"name":"Amphiprion clarkia","color":"#00D4BB","group":"fish","inst":122,"imgs":52},{"id":10,"name":"Amphiprion ocellaris","color":"#2C99A8","group":"fish","inst":312,"imgs":75}],"split":"train"};
+const CLS = Object.fromEntries(DATA.classes.map(c => [c.id, c]));
+const sel = new Set();
+let view = [];
+
+const $ = s => document.querySelector(s);
+const gallery = $('#gallery');
+
+function apply() {
+  const q = $('#q').value.trim().toLowerCase();
+  const mode = $('#mode').value;
+  view = DATA.records.filter(r => {
+    if (q && !r.id.toLowerCase().includes(q)) return false;
+    if (!sel.size) return true;
+    const has = c => (r.counts[c] || 0) > 0;
+    return mode === 'and' ? [...sel].every(has) : [...sel].some(has);
+  });
+  const s = $('#sort').value;
+  if (s === 'total-desc') view.sort((a, b) => b.total - a.total || a.id.localeCompare(b.id));
+  else if (s === 'total-asc') view.sort((a, b) => a.total - b.total || a.id.localeCompare(b.id));
+  else view.sort((a, b) => a.id.localeCompare(b.id));
+
+  $('#count-note').textContent = sel.size ? `已選 ${sel.size} 類` : '未篩選';
+
+  gallery.innerHTML = view.map((r, i) => `<figure class="item" data-i="${i}">
+      <img loading="lazy" src="${r.thumb}" alt="${r.id}">
+      <figcaption><span>${r.id}</span><span class="n">${r.total} 標記</span></figcaption>
+    </figure>`).join('');
+  $('#empty').hidden = view.length > 0;
+}
+
+document.querySelectorAll('.chip[data-cls]').forEach(btn => {
+  btn.onclick = () => {
+    const c = +btn.dataset.cls;
+    sel.has(c) ? sel.delete(c) : sel.add(c);
+    btn.classList.toggle('on', sel.has(c));
+    apply();
+  };
+});
+$('#clear').onclick = () => {
+  sel.clear(); $('#q').value = '';
+  document.querySelectorAll('.chip.on').forEach(b => b.classList.remove('on'));
+  apply();
+};
+$('#q').oninput = apply; $('#sort').onchange = apply; $('#mode').onchange = apply;
+
+let cur = 0;
+function open_(i) {
+  cur = (i + view.length) % view.length;
+  const r = view[cur];
+  $('#lb-img').src = r.full;
+  $('#lb-id').textContent = `${r.id} · ${r.total} 個標記`;
+  $('#lb-cls').innerHTML = Object.keys(r.counts).sort((a, b) => a - b)
+    .map(c => `<span><i class="dot" style="background:${CLS[c].color};width:7px;height:7px;margin-right:5px"></i>${CLS[c].name} ×${r.counts[c]}</span>`).join('');
+  if (!$('#lb').open) $('#lb').showModal();
+}
+gallery.onclick = e => { const it = e.target.closest('.item'); if (it) open_(+it.dataset.i); };
+$('#prev').onclick = () => open_(cur - 1);
+$('#next').onclick = () => open_(cur + 1);
+$('#close').onclick = () => $('#lb').close();
+addEventListener('keydown', e => {
+  if (!$('#lb').open) return;
+  if (e.key === 'ArrowLeft') open_(cur - 1);
+  if (e.key === 'ArrowRight') open_(cur + 1);
+});
+
+apply();
+</script>
+</body>
+</html>

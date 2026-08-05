@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<title>成長情境模擬 — 珊瑚礁數位孿生平台 [展示資料]</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🪸</text></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+  // 與 index.html 相同的（淺色）色票，三頁風格一致
+  tailwind.config = {
+    theme: { extend: {
+      fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+      colors: {
+        ink:    { 950:'#f8fafc', 900:'#f1f5f9', 800:'#e2e8f0', 700:'#cbd5e1', 600:'#94a3b8' },
+        fog:    { 100:'#1e293b', 200:'#334155', 300:'#475569', 400:'#64748b', 500:'#94a3b8' },
+        coral:  { 300:'#fdba74', 400:'#fb923c', 500:'#f97316', 600:'#ea580c' },
+        warn:   { 400:'#fbbf24' }, danger: { 400:'#f87171' }, ok: { 400:'#34d399' },
+      },
+      boxShadow: { card: '0 1px 3px rgba(0,0,0,.08), 0 4px 12px -4px rgba(0,0,0,.12)' }
+    } }
+  };
+</script>
+<style>
+  html, body { font-family: 'Inter', system-ui, sans-serif; }
+  body { background:#ffffff; color:#1e293b; }
+  .reading-value { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+  .badge-demo { background: rgba(249,115,22,.1); color:#ea580c; border:1px solid rgba(249,115,22,.3);
+    padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight:600; letter-spacing:.04em; }
+  .pill { transition: all .15s ease; }
+  .pill:hover { color:#1e293b; border-color:#cbd5e1; background:#f8fafc; }
+  .pill.active { background:#1e293b; color:#fff; border-color:#1e293b; }
+  .ico { width:14px; height:14px; display:inline-block; vertical-align:-2px; }
+  input[type=range] { -webkit-appearance:none; appearance:none; width:100%; height:6px; border-radius:999px; background:#e2e8f0; outline:none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:18px; height:18px; border-radius:50%; background:#f97316; border:2px solid #fff; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.25); }
+  input[type=range]::-moz-range-thumb { width:18px; height:18px; border-radius:50%; background:#f97316; border:2px solid #fff; cursor:pointer; }
+  .chart-wrap { position: relative; height: 380px; }
+  .dot { width:9px; height:9px; border-radius:50%; display:inline-block; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- Top bar (與 index 一致) -->
+<header class="px-5 py-3 border-b border-ink-800/80 flex items-center gap-4">
+  <div class="flex items-center gap-3">
+    <span role="img" aria-label="珊瑚礁數位孿生平台" class="w-9 h-9 rounded-lg flex items-center justify-center text-[26px] leading-none select-none">🪸</span>
+    <div>
+      <div class="text-[15px] font-semibold tracking-tight">珊瑚礁數位孿生平台 <span class="badge-demo align-middle ml-1">展示資料</span></div>
+      <div class="text-[11px] text-fog-500">成長情境模擬 · 改變水質 → 推估 7 屬未來成長與健康</div>
+    </div>
+  </div>
+  <div class="ml-auto flex items-center gap-2 text-[12px] text-fog-400">
+    <a href="index.html" class="pill px-3 py-1.5 rounded-lg bg-white border border-ink-800">← 3D 檢視</a>
+    <a href="environment.html" class="pill px-3 py-1.5 rounded-lg bg-white border border-ink-800">環境監測</a>
+    <a href="vis_labels/index_train.html" class="pill px-3 py-1.5 rounded-lg bg-white border border-ink-800">資料集標註</a>
+  </div>
+</header>
+
+<!-- Title row -->
+<section class="px-5 pt-4 pb-2 flex items-end gap-3 flex-wrap">
+  <h1 class="text-[18px] font-semibold tracking-tight">成長情境模擬 <span class="text-fog-500 text-[13px] font-normal">What-if Growth Projection</span></h1>
+  <div class="ml-auto flex items-center gap-2 text-[12px] text-fog-400">
+    <span>投影期間</span>
+    <div id="horizon-seg" class="flex bg-white border border-ink-800 rounded-lg p-0.5">
+      <button data-h="12" class="pill px-3 py-1 rounded-md">12 月</button>
+      <button data-h="24" class="pill px-3 py-1 rounded-md">24 月</button>
+      <button data-h="60" class="pill px-3 py-1 rounded-md">5 年</button>
+    </div>
+  </div>
+</section>
+
+<!-- Controls: 3 global sliders -->
+<section class="px-5 grid grid-cols-1 lg:grid-cols-3 gap-4">
+  <div class="bg-white rounded-xl border border-ink-800 shadow-card p-4">
+    <div class="flex items-center gap-2 text-fog-300 text-[13px] font-medium">
+      <svg class="ico text-danger-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0Z"/></svg>
+      水溫 Temperature
+      <span class="ml-auto reading-value text-lg font-semibold" id="v-T">—</span><span class="text-fog-400 text-[12px]">°C</span>
+    </div>
+    <input type="range" id="s-T" min="18" max="36" step="0.1" class="mt-3" />
+    <div class="flex justify-between text-[10px] text-fog-500 mt-1"><span>18</span><span class="text-fog-400">造礁珊瑚最適 25–29 °C</span><span>36</span></div>
+  </div>
+  <div class="bg-white rounded-xl border border-ink-800 shadow-card p-4">
+    <div class="flex items-center gap-2 text-fog-300 text-[13px] font-medium">
+      <svg class="ico text-ok-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12s3-6 9-6 9 6 9 6-3 6-9 6-9-6-9-6Z"/><circle cx="12" cy="12" r="2"/></svg>
+      鹽度 Salinity
+      <span class="ml-auto reading-value text-lg font-semibold" id="v-S">—</span><span class="text-fog-400 text-[12px]">ppt</span>
+    </div>
+    <input type="range" id="s-S" min="15" max="40" step="0.5" class="mt-3" />
+    <div class="flex justify-between text-[10px] text-fog-500 mt-1"><span>15</span><span class="text-fog-400">最適 33–36 ppt</span><span>40</span></div>
+  </div>
+  <div class="bg-white rounded-xl border border-ink-800 shadow-card p-4">
+    <div class="flex items-center gap-2 text-fog-300 text-[13px] font-medium">
+      <svg class="ico text-warn-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2.5C12 2.5 5 10 5 14.5a7 7 0 0 0 14 0C19 10 12 2.5 12 2.5Z"/></svg>
+      溶氧 Dissolved O₂
+      <span class="ml-auto reading-value text-lg font-semibold" id="v-DO">—</span><span class="text-fog-400 text-[12px]">mg/L</span>
+    </div>
+    <input type="range" id="s-DO" min="0" max="9" step="0.1" class="mt-3" />
+    <div class="flex justify-between text-[10px] text-fog-500 mt-1"><span>0</span><span class="text-fog-400">健康 &gt;5–6 mg/L</span><span>9</span></div>
+  </div>
+</section>
+
+<!-- Presets -->
+<section class="px-5 pt-3 pb-1 flex flex-wrap items-center gap-2 text-[12px]">
+  <span class="text-fog-500">情境預設：</span>
+  <button data-preset="normal"   class="pill px-3 py-1 rounded-md bg-white border border-ink-800 text-fog-300">常態 27°/35/6.5</button>
+  <button data-preset="summer"   class="pill px-3 py-1 rounded-md bg-white border border-ink-800 text-fog-300">夏季高溫 29.5°</button>
+  <button data-preset="heatwave" class="pill px-3 py-1 rounded-md bg-white border border-ink-800 text-fog-300">熱浪 31.5°</button>
+  <button data-preset="rain"     class="pill px-3 py-1 rounded-md bg-white border border-ink-800 text-fog-300">暴雨低鹽 26ppt</button>
+  <button data-preset="hypoxia"  class="pill px-3 py-1 rounded-md bg-white border border-ink-800 text-fog-300">夜間缺氧 3mg/L</button>
+</section>
+
+<!-- Main chart: 7 genera in ONE chart -->
+<section class="px-5 mt-2">
+  <div class="bg-white rounded-xl border border-ink-800 shadow-card p-4">
+    <div class="flex items-center justify-between text-[12px] text-fog-400 mb-2">
+      <span>7 屬群體相對尺寸投影（%，邏輯斯 S 形成長）—— 同一水質下各屬反應比較</span>
+      <span class="text-fog-500" id="chart-sub">—</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-proj"></canvas></div>
+  </div>
+</section>
+
+<!-- Per-genus comparison table -->
+<section class="px-5 mt-4 mb-2">
+  <div class="bg-white rounded-xl border border-ink-800 shadow-card p-4 overflow-x-auto">
+    <div class="text-[12px] text-fog-400 mb-2">各屬當前情境判定（隨滑桿即時更新）</div>
+    <table class="w-full text-[12px]">
+      <thead class="text-fog-500 text-[11px] border-b border-ink-800">
+        <tr class="text-left">
+          <th class="py-1.5 pr-2 font-medium">屬</th>
+          <th class="py-1.5 px-2 font-medium">群落</th>
+          <th class="py-1.5 px-2 font-medium">f_溫</th>
+          <th class="py-1.5 px-2 font-medium">f_鹽</th>
+          <th class="py-1.5 px-2 font-medium">f_氧</th>
+          <th class="py-1.5 px-2 font-medium">期末尺寸</th>
+          <th class="py-1.5 px-2 font-medium">期末健康</th>
+          <th class="py-1.5 px-2 font-medium">判定</th>
+        </tr>
+      </thead>
+      <tbody id="status-rows"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="px-5 py-5 mt-2 border-t border-ink-800/80 text-[11px] text-fog-500 leading-relaxed">
+  <div class="flex items-start gap-2">
+    <svg class="ico mt-0.5 text-warn-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <span><b>模型：</b>環境限制 <code>gEnv = f_T·f_S·f_DO</code>（乘法/Liebig）× <b>邏輯斯（S 形）群體成長</b>（初期加速、近最大尺寸趨緩，非線性）＋ 逐日熱壓力健康/死亡。
+      溫度／鹽度／溶氧的最適區間與致死門檻取自已發表文獻並經對抗式驗證——<b>完整逐屬參數、引用與限制見</b> <code>docs/coral_growth_environment.md</code>。曲線形狀與動態常數為模型選擇，僅供情境比較與教學示範，非精確生長預測。</span>
+  </div>
+</footer>
+
+<script>
+const STATE = { params:null, horizon:24, env:{T:27,S:35,DO:6.5}, chart:null };
+const GCOL = { Acropora:'#ef4444', Euphyllia:'#f59e0b', Stylophora:'#8b5cf6', Montipora:'#0ea5e9', Pocillopora:'#10b981', Favites:'#ec4899', Pavona:'#14b8a6' };
+
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const smoothstep=(a,b,x)=>{const t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t);};
+
+// ---- 反應函式 (0..1) ----
+function betaTPC(x,min,opt,max){ if(x<=min||x>=max) return 0; const a=(max-opt)/(opt-min);
+  return clamp(((max-x)/(max-opt))*Math.pow((x-min)/(opt-min),a),0,1); }
+const fTemp=(x,t)=>betaTPC(x,t.min,t.opt,t.max);
+const fSal =(x,s)=> x<=s.lethal_low ? 0 : betaTPC(x,s.min,s.opt,s.max);
+function fDO(x,d){ if(x<=d.lethal) return 0; if(x>=d.opt) return 1;
+  if(x<d.hypoxia_stress) return 0.5*(x-d.lethal)/(d.hypoxia_stress-d.lethal);
+  return 0.5+0.5*(x-d.hypoxia_stress)/(d.opt-d.hypoxia_stress); }
+
+// ---- 投影：邏輯斯(S形)成長 + 健康/死亡 ----
+function project(g, env, months){
+  const C = STATE.params.model_constants;
+  const days = Math.round(months*30);
+  const step = Math.max(1, Math.round(days/60));
+  let H = C.initial_health, S = C.size_initial_pct;
+  const fT=fTemp(env.T,g.temp), fS=fSal(env.S,g.sal), fD=fDO(env.DO,g.do);
+  const gEnv = fT*fS*fD;
+  const kDay = clamp((g.baseline_linear_extension_mm_yr||10)/C.logistic_rate_divisor, C.logistic_k_min, C.logistic_k_max)/365;
+  const Hm = C.health_mortality_threshold;
+  const series=[{x:0,y:+S.toFixed(2)}];
+  let deathMonth=null;
+  for(let day=1; day<=days; day++){
+    let st=0;
+    if(env.T>g.temp.bleaching_onset) st+=C.k_thermal_stress_per_degC_day*(env.T-g.temp.bleaching_onset);
+    if(env.T>=g.temp.lethal)         st+=C.lethal_extra_stress_per_day;
+    if(env.S<g.sal.min)              st+=C.k_salinity_stress_per_ppt_day*(g.sal.min-env.S);
+    if(env.S>g.sal.max)              st+=C.k_salinity_stress_per_ppt_day*(env.S-g.sal.max);
+    if(env.S<=g.sal.lethal_low)      st+=C.lethal_extra_stress_per_day;
+    if(env.DO<g.do.hypoxia_stress)   st+=C.k_do_stress_per_mgL_day*(g.do.hypoxia_stress-env.DO);
+    if(env.DO<=g.do.lethal)          st+=C.lethal_extra_stress_per_day;
+    const rec = st<=0 ? C.k_recovery_per_day*gEnv*(1-H) : 0;
+    H = clamp(H + rec - st, 0, 1);
+    const gate = smoothstep(C.growth_health_gate[0], C.growth_health_gate[1], H);
+    const grow = kDay * S * (1 - S/100) * gEnv * gate;
+    const die  = H < Hm ? C.mortality_rate_per_day * S * ((Hm - H)/Hm) : 0;
+    S = clamp(S + grow - die, 0, 100);
+    if(S<=0.5 && deathMonth===null) deathMonth=day/30;
+    if(day%step===0 || day===days) series.push({x:+(day/30).toFixed(2), y:+S.toFixed(2)});
+  }
+  return { series, fT, fS, fD, gEnv, finalH:H, finalS:S, deathMonth };
+}
+
+function verdict(r){
+  if (r.deathMonth!==null) return {t:'死亡 ☠', c:'#ef4444', sub:'第 '+r.deathMonth.toFixed(1)+' 月'};
+  if (r.finalH<0.5)        return {t:'白化/衰退', c:'#fb923c', sub:''};
+  if (r.gEnv<0.2)          return {t:'停滯', c:'#eab308', sub:''};
+  if (r.gEnv<0.6)          return {t:'受限', c:'#ca8a04', sub:''};
+  return {t:'健康', c:'#16a34a', sub:''};
+}
+
+function render(){
+  document.getElementById('v-T').textContent  = STATE.env.T.toFixed(1);
+  document.getElementById('v-S').textContent  = STATE.env.S.toFixed(1);
+  document.getElementById('v-DO').textContent = STATE.env.DO.toFixed(1);
+
+  const pct=v=>(v*100).toFixed(0)+'%';
+  const rows=[]; let aliveCount=0;
+  STATE.params.genera.forEach((g,i)=>{
+    const r = project(g, STATE.env, STATE.horizon);
+    STATE.chart.data.datasets[i].data = r.series;
+    const v = verdict(r);
+    if (r.deathMonth===null) aliveCount++;
+    rows.push(`<tr class="border-b border-ink-900/60">
+      <td class="py-1.5 pr-2"><span class="dot mr-1.5" style="background:${GCOL[g.genus]}"></span>${g.zh} <span class="text-fog-500">${g.genus}</span></td>
+      <td class="py-1.5 px-2 text-fog-400">${g.n_colonies}</td>
+      <td class="py-1.5 px-2 reading-value">${pct(r.fT)}</td>
+      <td class="py-1.5 px-2 reading-value">${pct(r.fS)}</td>
+      <td class="py-1.5 px-2 reading-value">${pct(r.fD)}</td>
+      <td class="py-1.5 px-2 reading-value font-medium">${r.finalS.toFixed(0)}%</td>
+      <td class="py-1.5 px-2 reading-value">${r.finalH<=0.001?'0%':pct(r.finalH)}</td>
+      <td class="py-1.5 px-2 font-medium" style="color:${v.c}">${v.t}${v.sub?` <span class="text-fog-500 font-normal">${v.sub}</span>`:''}</td>
+    </tr>`);
+  });
+  STATE.chart.update('none');
+  document.getElementById('status-rows').innerHTML = rows.join('');
+  document.getElementById('chart-sub').textContent =
+    `第 ${STATE.horizon} 月 · ${aliveCount}/7 屬存活`;
+}
+
+function syncSliders(){
+  document.getElementById('s-T').value  = STATE.env.T;
+  document.getElementById('s-S').value  = STATE.env.S;
+  document.getElementById('s-DO').value = STATE.env.DO;
+}
+function applyPreset(p){
+  const M={ normal:{T:27,S:35,DO:6.5}, summer:{T:29.5,S:35,DO:6}, heatwave:{T:31.5,S:35,DO:5},
+            rain:{T:28,S:26,DO:6}, hypoxia:{T:28,S:35,DO:3} };
+  STATE.env = {...M[p]}; syncSliders(); render();
+}
+
+async function main(){
+  STATE.params = await (await fetch('coral_growth_params.json')).json();
+
+  const ctx = document.getElementById('chart-proj').getContext('2d');
+  STATE.chart = new Chart(ctx, {
+    type:'line',
+    data:{ datasets: STATE.params.genera.map(g=>({
+      label:`${g.zh}`, data:[], parsing:false,
+      borderColor:GCOL[g.genus], backgroundColor:GCOL[g.genus],
+      borderWidth:2, tension:.3, pointRadius:0, pointHoverRadius:4, fill:false,
+    })) },
+    options:{ responsive:true, maintainAspectRatio:false, animation:false,
+      interaction:{ mode:'nearest', axis:'x', intersect:false },
+      plugins:{
+        legend:{ display:true, position:'top', labels:{ color:'#475569', boxWidth:10, usePointStyle:true, pointStyle:'line', font:{size:11} } },
+        tooltip:{ backgroundColor:'#0b1220', borderColor:'#1e293b', borderWidth:1, titleColor:'#f1f5f9', bodyColor:'#cbd5e1', padding:8,
+          callbacks:{ title:items=>'第 '+(items[0].parsed.x)+' 月',
+                      label:c=>` ${c.dataset.label}: ${c.parsed.y.toFixed(0)}%` } },
+      },
+      scales:{
+        x:{ type:'linear', title:{ display:true, text:'月', color:'#94a3b8', font:{size:10} },
+            ticks:{ color:'#64748b', font:{size:10} }, grid:{ color:'rgba(148,163,184,.2)' } },
+        y:{ min:0, max:100, title:{ display:true, text:'群體相對尺寸 %', color:'#94a3b8', font:{size:10} },
+            ticks:{ color:'#64748b', font:{size:10} }, grid:{ color:'rgba(148,163,184,.2)' } },
+      },
+    },
+  });
+
+  const bind=(id,k)=>{ const el=document.getElementById(id); el.addEventListener('input',()=>{ STATE.env[k]=+el.value; render(); }); };
+  bind('s-T','T'); bind('s-S','S'); bind('s-DO','DO');
+
+  document.querySelectorAll('#horizon-seg button').forEach(b=>b.addEventListener('click',()=>{
+    STATE.horizon=+b.dataset.h;
+    document.querySelectorAll('#horizon-seg button').forEach(x=>x.classList.toggle('active',x===b));
+    render();
+  }));
+  document.querySelectorAll('[data-preset]').forEach(b=>b.addEventListener('click',()=>applyPreset(b.dataset.preset)));
+
+  document.querySelector('#horizon-seg button[data-h="24"]').classList.add('active');
+  syncSliders(); render();
+}
+main().catch(e=>{ document.body.innerHTML='<pre style="color:#b91c1c;padding:20px">'+e+'\n'+(e.stack||'')+'</pre>'; });
+</script>
+</body>
+</html>
