@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8" />
-<title>成長情境模擬 — 珊瑚礁數位孿生平台 [展示資料]</title>
+<title>成長情境推估 — 珊瑚礁數位孿生平台</title>
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🪸</text></svg>" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -40,6 +40,12 @@
   input[type=range]::-moz-range-thumb { width:18px; height:18px; border-radius:50%; background:#f97316; border:2px solid #fff; cursor:pointer; }
   .chart-wrap { position: relative; height: 380px; }
   .dot { width:9px; height:9px; border-radius:50%; display:inline-block; }
+  /* 導覽連結：四頁共用。不預先高亮任何一項，僅 hover 有變化 */
+  .nav-link { display:inline-flex; align-items:center; padding:6px 12px; border-radius:8px;
+              font-size:12px; line-height:1.25; white-space:nowrap; text-decoration:none;
+              color:#475569; background:#fff; border:1px solid #e2e8f0;
+              transition:color .15s ease, border-color .15s ease, background-color .15s ease; }
+  .nav-link:hover { color:#ea580c; border-color:rgba(249,115,22,.45); background:rgba(249,115,22,.08); }
 </style>
 </head>
 <body class="min-h-screen">
@@ -49,20 +55,20 @@
   <div class="flex items-center gap-3">
     <span role="img" aria-label="珊瑚礁數位孿生平台" class="w-9 h-9 rounded-lg flex items-center justify-center text-[26px] leading-none select-none">🪸</span>
     <div>
-      <div class="text-[15px] font-semibold tracking-tight">珊瑚礁數位孿生平台 <span class="badge-demo align-middle ml-1">展示資料</span></div>
-      <div class="text-[11px] text-fog-500">成長情境模擬 · 改變水質 → 推估 7 屬未來成長與健康</div>
+      <div class="text-[15px] font-semibold tracking-tight">珊瑚礁數位孿生平台</div>
+      <div class="text-[11px] text-fog-500">成長情境推估 · 改變水質 → 推估 7 屬未來成長與健康</div>
     </div>
   </div>
   <div class="ml-auto flex items-center gap-2 text-[12px] text-fog-400">
-    <a href="index.html" class="pill px-3 py-1.5 rounded-lg bg-white border border-ink-800">← 3D 檢視</a>
-    <a href="environment.html" class="pill px-3 py-1.5 rounded-lg bg-white border border-ink-800">環境監測</a>
-    <a href="vis_labels/index_train.html" class="pill px-3 py-1.5 rounded-lg bg-white border border-ink-800">資料集標註</a>
+    <a href="index.html" class="nav-link">3D 檢視</a>
+    <a href="environment.html" class="nav-link">環境監測</a>
+    <a href="vis_labels/index_train.html" class="nav-link">資料集標註</a>
   </div>
 </header>
 
 <!-- Title row -->
 <section class="px-5 pt-4 pb-2 flex items-end gap-3 flex-wrap">
-  <h1 class="text-[18px] font-semibold tracking-tight">成長情境模擬 <span class="text-fog-500 text-[13px] font-normal">What-if Growth Projection</span></h1>
+  <h1 class="text-[18px] font-semibold tracking-tight">成長情境推估</h1>
   <div class="ml-auto flex items-center gap-2 text-[12px] text-fog-400">
     <span>投影期間</span>
     <div id="horizon-seg" class="flex bg-white border border-ink-800 rounded-lg p-0.5">

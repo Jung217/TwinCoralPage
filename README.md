@@ -1,10 +1,8 @@
 # TwinCoralPage · 珊瑚礁數位孿生平台
 
-以 3D Gaussian Splatting 重建的珊瑚礁場景為核心，串接環境監測、成長情境模擬與分割資料集瀏覽的靜態展示站。
+以 3D Gaussian Splatting 重建的珊瑚礁場景為核心，串接環境監測、成長情境推估與分割資料集瀏覽的靜態網站。
 
 站台由 GitHub Actions 部署到 GitHub Pages，發佈根目錄是 `digital_twin_page/digital_twin_deploy/`，設定見 `.github/workflows/deploy.yml`。
-
----
 
 ## 頁面入口
 
@@ -13,14 +11,12 @@
 | 網址 | 檔案路徑 | 說明 |
 | --- | --- | --- |
 | `/index.html` | `digital_twin_page/digital_twin_deploy/index.html` | 主頁，3D 檢視器（自然色／群落染色／Mesh／Mesh 群落四種模式） |
-| `/environment.html` | `digital_twin_page/digital_twin_deploy/environment.html` | 環境監測（模擬資料） |
-| `/growth_simulator.html` | `digital_twin_page/digital_twin_deploy/growth_simulator.html` | 成長情境模擬，調整水質推估 7 屬未來成長與健康 |
+| `/environment.html` | `digital_twin_page/digital_twin_deploy/environment.html` | 環境監測，水溫／酸鹼值／鹽度／溶氧四項指標與趨勢圖 |
+| `/growth_simulator.html` | `digital_twin_page/digital_twin_deploy/growth_simulator.html` | 成長情境推估，調整水質推估 7 屬未來成長與健康 |
 | `/vis_labels/index_train.html` | `digital_twin_page/digital_twin_deploy/vis_labels/index_train.html` | 珊瑚分割資料集標記瀏覽（train 集，129 張） |
 | `/fish-debug.html` | `digital_twin_page/digital_twin_deploy/fish-debug.html` | 魚類模型除錯面板，未掛在導覽列 |
 
 四個主要頁面的頁首互相連結，`fish-debug.html` 需直接輸入網址。
-
----
 
 ## 完整目錄結構
 
@@ -36,12 +32,12 @@ TwinCoralPage/
     └── digital_twin_deploy/               ← Pages 發佈根目錄
         ├── index.html                     主頁 · 3D 檢視器
         ├── environment.html               環境監測
-        ├── growth_simulator.html          成長情境模擬
+        ├── growth_simulator.html          成長情境推估（檔名沿用舊稱）
         ├── fish-debug.html                魚類模型除錯面板
         ├── server.js                      本機靜態檔案伺服器
         ├── generate_demo_data.py          產生 environment_data.json 的展示資料
         ├── environment_data.json          環境監測時序資料
-        ├── coral_growth_params.json       成長模擬的 7 屬參數
+        ├── coral_growth_params.json       成長情境推估的 7 屬參數
         ├── cihci.png                      舊版 CIHCI logo，頁面已改用 🪸 emoji，目前無引用
         ├── README.md                      站台說明
         ├── ARCHITECTURE.md                架構說明
@@ -109,8 +105,6 @@ TwinCoralPage/
 
 各區塊佔用：`assets/coral` 約 93 MB、`assets/fish` 約 87 MB、`vis_labels` 約 39 MB、`assets/characters` 約 1.1 MB，其餘檔案合計約 0.4 MB。
 
----
-
 ## 程式引用的資產路徑
 
 `index.html` 的載入設定集中在檔案上半段，改動資產位置時這幾條要一起改：
@@ -132,12 +126,10 @@ TwinCoralPage/
 | 同上 | `./assets/fish/pez3.fbx` |
 | `fish-debug.html` | `./assets/fish/3d-model.fbx` |
 | `environment.html` 圖表資料 | `./environment_data.json` |
-| `growth_simulator.html` 模擬參數 | `./coral_growth_params.json` |
+| `growth_simulator.html` 推估參數 | `./coral_growth_params.json` |
 | `vis_labels/index_train.html` | `_thumbs_train/frame_*.jpg`、`train/frame_*_vis.jpg` |
 
 外部相依全部走 CDN，沒有 build 步驟：Tailwind、Chart.js、chartjs-adapter-date-fns、oh-my-live2d、Google Fonts (Inter)。
-
----
 
 ## 本機執行
 
@@ -159,10 +151,8 @@ cd digital_twin_page\digital_twin_deploy
 python generate_demo_data.py
 ```
 
----
-
 ## 備註
 
 - 站台圖示與頁首標誌統一使用珊瑚 emoji 🪸，以 SVG data URI 當 favicon，沒有額外圖檔相依。
 - 部署使用 `actions/upload-pages-artifact`，不經過 Jekyll，因此 `vis_labels/_thumbs_train/` 這種底線開頭的目錄不會被略過。
-- 頁面上的數據為展示用模擬資料，頁首均標示「展示資料」。
+- 主頁右上「選項」選單可切換群落框線、五種魚類，以及導覽員珊瑚娘的顯示與否；導覽員狀態存在 `localStorage` 的 `charVisible`。

@@ -26,10 +26,12 @@
   .sub { font-size:11px; color:var(--fog-400); }
   .badge { font-size:10px; padding:2px 7px; border-radius:999px; border:1px solid var(--ink-700);
             color:var(--fog-400); background:#fff; }
-  .navlink { font-size:11px; padding:5px 10px; border-radius:8px; border:1px solid var(--ink-800);
-             color:var(--fog-300); background:#fff; text-decoration:none; white-space:nowrap;
-             transition:border-color .15s, color .15s; }
-  .navlink:hover { border-color:var(--coral-400); color:var(--coral-600); }
+  /* 導覽連結：四頁共用。不預先高亮任何一項，僅 hover 有變化 */
+  .nav-link { display:inline-flex; align-items:center; padding:6px 12px; border-radius:8px;
+              font-size:12px; line-height:1.25; white-space:nowrap; text-decoration:none;
+              color:#475569; background:#fff; border:1px solid #e2e8f0;
+              transition:color .15s ease, border-color .15s ease, background-color .15s ease; }
+  .nav-link:hover { color:#ea580c; border-color:rgba(249,115,22,.45); background:rgba(249,115,22,.08); }
   main { max-width:1440px; margin:0 auto; padding:18px 20px 60px; }
   section { margin-bottom:16px; }
   .card { background:#fff; border:1px solid var(--ink-800); border-radius:12px; box-shadow:var(--shadow-card); }
@@ -97,9 +99,9 @@
   <div style="flex:1">
     <h1>珊瑚分割資料集 · 標記瀏覽</h1>
   </div>
-  <a href="../index.html" class="navlink">← 3D 檢視</a>
-  <a href="../environment.html" class="navlink">環境監測</a>
-  <a href="../growth_simulator.html" class="navlink">成長情境模擬</a>
+  <a href="../index.html" class="nav-link">3D 檢視</a>
+  <a href="../environment.html" class="nav-link">環境監測</a>
+  <a href="../growth_simulator.html" class="nav-link">成長情境推估</a>
 </header>
 
 <main>

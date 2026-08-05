@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8" />
-<title>Environmental Monitoring (Simulated) — Coral Reef Digital Twin</title>
+<title>環境監測 — 珊瑚礁數位孿生平台</title>
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🪸</text></svg>" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -54,6 +54,12 @@
   .modal-backdrop { background: rgba(0,0,0,.3); backdrop-filter: blur(2px); }
   /* chart canvas need fixed height in flex grid */
   .chart-wrap { position: relative; height: 200px; }
+  /* 導覽連結：四頁共用。不預先高亮任何一項，僅 hover 有變化 */
+  .nav-link { display:inline-flex; align-items:center; padding:6px 12px; border-radius:8px;
+              font-size:12px; line-height:1.25; white-space:nowrap; text-decoration:none;
+              color:#475569; background:#fff; border:1px solid #e2e8f0;
+              transition:color .15s ease, border-color .15s ease, background-color .15s ease; }
+  .nav-link:hover { color:#ea580c; border-color:rgba(249,115,22,.45); background:rgba(249,115,22,.08); }
 </style>
 </head>
 <body class="min-h-screen">
@@ -63,31 +69,31 @@
   <div class="flex items-center gap-3">
     <span role="img" aria-label="珊瑚礁數位孿生平台" class="w-9 h-9 rounded-lg flex items-center justify-center text-[26px] leading-none select-none">🪸</span>
     <div>
-      <div class="text-[15px] font-semibold tracking-tight">珊瑚礁數位孿生平台 <span class="badge-demo align-middle ml-1">展示資料</span></div>
-      <div class="text-[11px] text-fog-500">環境監測（模擬）· Environmental Monitoring</div>
+      <div class="text-[15px] font-semibold tracking-tight">珊瑚礁數位孿生平台</div>
+      <div class="text-[11px] text-fog-500">環境監測</div>
     </div>
   </div>
   <div class="ml-auto flex items-center gap-2 text-[12px] text-fog-400">
     <span class="pulse-dot inline-block w-2 h-2 rounded-full bg-ok-400"></span>
     <span class="mr-2">更新 <span id="last-update" class="text-fog-200 tabular-nums">—</span></span>
-    <a href="index.html" class="pill px-3 py-1.5 rounded-lg bg-white border border-ink-800 hover:bg-ink-900 transition-colors">← 3D 檢視</a>
-    <a href="growth_simulator.html" class="px-3 py-1.5 rounded-lg bg-coral-500/10 border border-coral-500/30 text-coral-600 hover:bg-coral-500/20 transition-colors font-medium">成長情境模擬</a>
-    <a href="vis_labels/index_train.html" class="pill px-3 py-1.5 rounded-lg bg-white border border-ink-800 hover:bg-ink-900 transition-colors">資料集標註</a>
+    <a href="index.html" class="nav-link">3D 檢視</a>
+    <a href="growth_simulator.html" class="nav-link">成長情境推估</a>
+    <a href="vis_labels/index_train.html" class="nav-link">資料集標註</a>
   </div>
 </header>
 
 <!-- Section header -->
 <section class="px-6 pt-5 pb-3 flex items-end gap-3">
-  <h1 class="text-[18px] font-semibold tracking-tight">Environmental Monitoring <span class="text-fog-500 text-[13px] font-normal">(Simulated)</span></h1>
+  <h1 class="text-[18px] font-semibold tracking-tight">環境監測</h1>
   <div class="ml-auto flex items-center gap-2">
     <!-- Time range -->
     <div class="flex bg-ink-900/80 border border-ink-800 rounded-lg p-0.5 text-[12px] text-fog-400">
-      <button data-range="24h" class="seg-btn px-3 py-1 rounded-md">24h</button>
-      <button data-range="7d"  class="seg-btn px-3 py-1 rounded-md">7d</button>
-      <button data-range="30d" class="seg-btn px-3 py-1 rounded-md active">30d</button>
+      <button data-range="24h" class="seg-btn px-3 py-1 rounded-md">24 小時</button>
+      <button data-range="7d"  class="seg-btn px-3 py-1 rounded-md">7 天</button>
+      <button data-range="30d" class="seg-btn px-3 py-1 rounded-md active">30 天</button>
     </div>
     <!-- Alert settings (placeholder) -->
-    <button id="alert-settings" title="Alert settings"
+    <button id="alert-settings" title="警示設定"
       class="w-8 h-8 grid place-items-center rounded-lg bg-ink-900/80 border border-ink-800 text-fog-400 hover:text-fog-200 hover:border-ink-700">
       <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
     </button>
@@ -100,56 +106,52 @@
   <div class="reading-card bg-ink-800/70 rounded-xl border border-ink-800 shadow-card p-4 relative">
     <div class="flex items-center gap-2 text-fog-400 text-[12px]">
       <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0Z"/></svg>
-      <span>Water Temperature</span>
-      <span class="demo-tag ml-auto">demo</span>
+      <span>水溫</span>
     </div>
     <div class="mt-2 flex items-baseline gap-1.5">
       <span id="r-sst" class="reading-value text-3xl font-semibold tracking-tight">—</span>
       <span class="text-fog-400 text-[13px]">°C</span>
       <span id="d-sst" class="trend-flat text-[12px] ml-auto tabular-nums">—</span>
     </div>
-    <div class="text-[11px] text-fog-500 mt-1">Bleaching threshold: <span class="text-warn-400">29.0 °C</span></div>
+    <div class="text-[11px] text-fog-500 mt-1">白化門檻：<span class="text-warn-400">29.0 °C</span></div>
   </div>
   <!-- pH -->
   <div class="reading-card bg-ink-800/70 rounded-xl border border-ink-800 shadow-card p-4 relative">
     <div class="flex items-center gap-2 text-fog-400 text-[12px]">
       <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M5 9h14M5 15h14"/></svg>
-      <span>pH</span>
-      <span class="demo-tag ml-auto">demo</span>
+      <span>酸鹼值 pH</span>
     </div>
     <div class="mt-2 flex items-baseline gap-1.5">
       <span id="r-ph" class="reading-value text-3xl font-semibold tracking-tight">—</span>
       <span id="d-ph" class="trend-flat text-[12px] ml-auto tabular-nums">—</span>
     </div>
-    <div class="text-[11px] text-fog-500 mt-1">Healthy range: 7.9 – 8.3</div>
+    <div class="text-[11px] text-fog-500 mt-1">健康區間：7.9 – 8.3</div>
   </div>
   <!-- Salinity -->
   <div class="reading-card bg-ink-800/70 rounded-xl border border-ink-800 shadow-card p-4 relative">
     <div class="flex items-center gap-2 text-fog-400 text-[12px]">
       <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12s3-6 9-6 9 6 9 6-3 6-9 6-9-6-9-6Z"/><circle cx="12" cy="12" r="2"/></svg>
-      <span>Salinity</span>
-      <span class="demo-tag ml-auto">demo</span>
+      <span>鹽度</span>
     </div>
     <div class="mt-2 flex items-baseline gap-1.5">
       <span id="r-sal" class="reading-value text-3xl font-semibold tracking-tight">—</span>
       <span class="text-fog-400 text-[13px]">‰</span>
       <span id="d-sal" class="trend-flat text-[12px] ml-auto tabular-nums">—</span>
     </div>
-    <div class="text-[11px] text-fog-500 mt-1">Reef-normal: 34 – 36 ‰</div>
+    <div class="text-[11px] text-fog-500 mt-1">珊瑚礁常態：34 – 36 ‰</div>
   </div>
   <!-- DO -->
   <div class="reading-card bg-ink-800/70 rounded-xl border border-ink-800 shadow-card p-4 relative">
     <div class="flex items-center gap-2 text-fog-400 text-[12px]">
       <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2.5C12 2.5 5 10 5 14.5a7 7 0 0 0 14 0C19 10 12 2.5 12 2.5Z"/></svg>
-      <span>Dissolved Oxygen</span>
-      <span class="demo-tag ml-auto">demo</span>
+      <span>溶氧</span>
     </div>
     <div class="mt-2 flex items-baseline gap-1.5">
       <span id="r-do" class="reading-value text-3xl font-semibold tracking-tight">—</span>
       <span class="text-fog-400 text-[13px]">mg/L</span>
       <span id="d-do" class="trend-flat text-[12px] ml-auto tabular-nums">—</span>
     </div>
-    <div class="text-[11px] text-fog-500 mt-1">Low alert: &lt; 5.0 mg/L</div>
+    <div class="text-[11px] text-fog-500 mt-1">低值警示：&lt; 5.0 mg/L</div>
   </div>
 </section>
 
@@ -157,52 +159,44 @@
 <section class="px-6 mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
   <div class="bg-ink-800/70 rounded-xl border border-ink-800 shadow-card p-4">
     <div class="flex items-center justify-between text-[12px] text-fog-400 mb-2">
-      <span>Water Temperature trend</span>
-      <span class="text-fog-500" id="range-label-sst">last 30 days</span>
+      <span>水溫趨勢</span>
+      <span class="text-fog-500" id="range-label-sst">近 30 天</span>
     </div>
     <div class="chart-wrap"><canvas id="chart-sst"></canvas></div>
   </div>
   <div class="bg-ink-800/70 rounded-xl border border-ink-800 shadow-card p-4">
     <div class="flex items-center justify-between text-[12px] text-fog-400 mb-2">
-      <span>pH trend</span>
-      <span class="text-fog-500" id="range-label-ph">last 30 days</span>
+      <span>酸鹼值趨勢</span>
+      <span class="text-fog-500" id="range-label-ph">近 30 天</span>
     </div>
     <div class="chart-wrap"><canvas id="chart-ph"></canvas></div>
   </div>
   <div class="bg-ink-800/70 rounded-xl border border-ink-800 shadow-card p-4">
     <div class="flex items-center justify-between text-[12px] text-fog-400 mb-2">
-      <span>Salinity trend</span>
-      <span class="text-fog-500" id="range-label-sal">last 30 days</span>
+      <span>鹽度趨勢</span>
+      <span class="text-fog-500" id="range-label-sal">近 30 天</span>
     </div>
     <div class="chart-wrap"><canvas id="chart-sal"></canvas></div>
   </div>
   <div class="bg-ink-800/70 rounded-xl border border-ink-800 shadow-card p-4">
     <div class="flex items-center justify-between text-[12px] text-fog-400 mb-2">
-      <span>Dissolved Oxygen trend</span>
-      <span class="text-fog-500" id="range-label-do">last 30 days</span>
+      <span>溶氧趨勢</span>
+      <span class="text-fog-500" id="range-label-do">近 30 天</span>
     </div>
     <div class="chart-wrap"><canvas id="chart-do"></canvas></div>
   </div>
 </section>
-
-<!-- Footer -->
-<footer class="px-6 py-5 mt-6 border-t border-ink-800/80 text-[11px] text-fog-500 leading-relaxed">
-  <div class="flex items-start gap-2">
-    <svg class="ico mt-0.5 text-warn-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-    <span>Environmental sensor data shown is <b>simulated</b> for demonstration. 3D coral model and colony classifications are derived from real field survey data (T0: 2026-05). Sensor integration is planned.</span>
-  </div>
-</footer>
 
 <!-- Alert settings modal -->
 <div id="modal" class="hidden fixed inset-0 modal-backdrop z-50 grid place-items-center p-4">
   <div class="bg-ink-800 border border-ink-700 rounded-xl shadow-card max-w-sm w-full p-5">
     <div class="flex items-center gap-2 mb-2">
       <svg class="ico text-coral-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-      <div class="text-[14px] font-semibold">Custom alerts</div>
+      <div class="text-[14px] font-semibold">自訂警示</div>
       <button id="modal-close" class="ml-auto text-fog-500 hover:text-fog-200 text-lg leading-none">×</button>
     </div>
-    <div class="text-[13px] text-fog-300">Feature coming soon: set custom alert thresholds for environmental indicators (e.g., SST &gt; 29°C, pH &lt; 7.9).</div>
-    <button id="modal-ok" class="mt-4 w-full py-2 rounded-md bg-coral-500 hover:bg-coral-600 text-white text-[13px] font-medium">Got it</button>
+    <div class="text-[13px] text-fog-300">功能開發中：可自行設定各項環境指標的警示門檻（例如水溫 &gt; 29 °C、pH &lt; 7.9）。</div>
+    <button id="modal-ok" class="mt-4 w-full py-2 rounded-md bg-coral-500 hover:bg-coral-600 text-white text-[13px] font-medium">知道了</button>
   </div>
 </div>
 
@@ -313,7 +307,7 @@ const bleachLinePlugin = {
     ctx.beginPath(); ctx.moveTo(xScale.left, y); ctx.lineTo(xScale.right, y); ctx.stroke();
     ctx.setLineDash([]);
     ctx.fillStyle = '#fca5a5'; ctx.font = '10px Inter, sans-serif';
-    ctx.fillText('Bleaching warning · 29 °C', xScale.left + 6, y - 4);
+    ctx.fillText('白化警戒 · 29 °C', xScale.left + 6, y - 4);
     ctx.restore();
   }
 };
@@ -350,7 +344,7 @@ function refreshCharts() {
   const sstData = STATE.charts.sst.data.datasets[0].data;
   STATE.charts.sst.data.datasets[0].pointRadius = sstData.map(p => p.y >= 28.5 ? 3 : 0);
   Object.values(STATE.charts).forEach(c => c.update('none'));
-  const label = STATE.range === '24h' ? 'last 24 hours' : STATE.range === '7d' ? 'last 7 days' : 'last 30 days';
+  const label = STATE.range === '24h' ? '近 24 小時' : STATE.range === '7d' ? '近 7 天' : '近 30 天';
   ['sst','ph','sal','do'].forEach(k => document.getElementById('range-label-'+k).textContent = label);
 }
 
@@ -361,7 +355,7 @@ function setRange(r) {
 }
 
 // =========================================
-//  Live update simulation: every 30s ±0.1
+//  即時更新：每 30 秒 ±0.1
 // =========================================
 function jitter(amp) { return (Math.random()*2 - 1) * amp; }
 
