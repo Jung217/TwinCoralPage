@@ -1926,10 +1926,11 @@ async function main() {
   } catch { STATE.sceneBounds = null; }
 
   // charts
-  STATE.charts.sst = buildMiniChart('chart-sst', 'sst', '#f87171', { min: 22, max: 26, step: 2 });
+  // 比照比重：軸心對準資料典型值、上下各一格（3 個刻度），曲線落在圖中段；氮磷的警戒虛線仍在範圍內
+  STATE.charts.sst = buildMiniChart('chart-sst', 'sst', '#f87171', { min: 21, max: 25, step: 2 });
   STATE.charts.sg  = buildMiniChart('chart-sg',  'sg',  '#34d399', { min: 1.024, max: 1.026, step: 0.001 });
-  STATE.charts.n   = buildMiniChart('chart-n',   'n',   '#60a5fa', { min: 4, max: 12, step: 4 });
-  STATE.charts.p   = buildMiniChart('chart-p',   'p',   '#fbbf24', { min: 0.08, max: 0.24, step: 0.08 });
+  STATE.charts.n   = buildMiniChart('chart-n',   'n',   '#60a5fa', { min: 2, max: 12, step: 5 });
+  STATE.charts.p   = buildMiniChart('chart-p',   'p',   '#fbbf24', { min: 0.04, max: 0.24, step: 0.1 });
   refreshCharts();
 
   document.querySelectorAll('.seg-btn[data-range]').forEach(b => b.addEventListener('click', () => setRange(b.dataset.range)));
