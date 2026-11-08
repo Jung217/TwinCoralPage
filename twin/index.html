@@ -508,6 +508,14 @@ function hexToRgba(hex, a) {
   return `rgba(${r},${g},${b},${a})`;
 }
 
+// 四張小圖的 y 軸寬度統一取最寬者（比重刻度 1.024 最寬），讓繪圖區左右對齊、寬度一致
+let miniYAxisWidth = 0;
+function syncMiniYAxisWidth() {
+  miniYAxisWidth = 0;
+  Object.values(STATE.charts).forEach(c => c.update('none'));   // 先以各自刻度寬度排版
+  miniYAxisWidth = Math.max(0, ...Object.values(STATE.charts).map(c => c.scales.y.width || 0));
+}
+
 function buildMiniChart(canvasId, key, color, axis) {
   const ctx = document.getElementById(canvasId).getContext('2d');
   return new Chart(ctx, {
@@ -541,7 +549,8 @@ function buildMiniChart(canvasId, key, color, axis) {
         // 小圖只顯示 3 個刻度：用 suggestedMin/Max 時 Chart.js 會為了湊整數刻度把範圍撐大（氮變 0～20），曲線被壓扁；改成固定範圍
         y: { ticks: { color: '#475569', font: { size: 9 }, maxTicksLimit: 3, stepSize: axis.step },
              grid: { color: 'rgba(30,41,59,.5)', drawBorder: false },
-             min: axis.min, max: axis.max },
+             min: axis.min, max: axis.max,
+             afterFit(scale) { if (miniYAxisWidth) scale.width = miniYAxisWidth; } },
       },
     },
     plugins: ENV_THRESHOLDS[key] != null ? [thresholdLinePlugin(ENV_THRESHOLDS[key])] : [],
@@ -1931,6 +1940,7 @@ async function main() {
   STATE.charts.sg  = buildMiniChart('chart-sg',  'sg',  '#34d399', { min: 1.024, max: 1.026, step: 0.001 });
   STATE.charts.n   = buildMiniChart('chart-n',   'n',   '#60a5fa', { min: 2, max: 12, step: 5 });
   STATE.charts.p   = buildMiniChart('chart-p',   'p',   '#fbbf24', { min: 0.04, max: 0.24, step: 0.1 });
+  syncMiniYAxisWidth();
   refreshCharts();
 
   document.querySelectorAll('.seg-btn[data-range]').forEach(b => b.addEventListener('click', () => setRange(b.dataset.range)));
