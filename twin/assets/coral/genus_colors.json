@@ -1,0 +1,23 @@
+{
+ "_note": "各屬珊瑚之統一色碼（與影像資料庫標記頁、分割遮罩疊圖所用之調色盤一致）；三維主頁、成長情境模擬與統計圖表共用。",
+ "colors": {
+  "Acropora": "#FF3838",
+  "Euphyllia": "#FF9D97",
+  "Pocillopora": "#FF701F",
+  "Stylophora": "#FFB21D",
+  "Montipora": "#CFD231",
+  "Favites": "#48F90A",
+  "Fungia": "#92CC17",
+  "Pavona": "#3DDB86"
+ },
+ "zh": {
+  "Acropora": "軸孔珊瑚",
+  "Euphyllia": "真葉珊瑚",
+  "Pocillopora": "鹿角珊瑚",
+  "Stylophora": "柱珊瑚",
+  "Montipora": "表孔珊瑚",
+  "Favites": "菊珊瑚",
+  "Fungia": "蕈珊瑚",
+  "Pavona": "雀屏珊瑚"
+ }
+}

@@ -1,0 +1,89 @@
+<!--
+珊瑚缸數位孿生 — 水體模擬 Demo
+NTUST AI+3DGS 珊瑚礁監測系統 (SCI1150154)
+
+水體渲染技術基於：
+ThreeJS Water - https://github.com/jeantimex/threejs-water (Yong Su / jeantimex)
+Original WebGL Water Demo: http://madebyevan.com/webgl-water/
+Copyright 2011 Evan Wallace
+Released under the MIT license
+
+實體缸規格：
+- 缸內尺寸 寬60 × 深57 × 高53 cm（比例 1 世界單位 = 30 cm）
+- 水深 48 cm、缸緣高出水面 5 cm
+- 頂部後方中央 Y 形出水口，兩臂夾角約 110°，出口沉在水面下（造流）
+-->
+
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <title>珊瑚缸數位孿生 — 水體模擬</title>
+    <script type="module" crossorigin src="./assets/index-BY3nKFTn.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-ua1KZsY-.css">
+  </head>
+  <body>
+    <div id="help" class="collapsed">
+      <h1>珊瑚缸數位孿生</h1>
+      <p style="text-align: center">即時水體模擬 Demo</p>
+      <h2>實體缸規格：</h2>
+      <ul>
+        <li>缸內尺寸：寬 60 × 深 57 × 高 53 cm</li>
+        <li>水深 48 cm，缸緣高出水面 5 cm</li>
+        <li>Y 形出水口：頂部後方中央，整支水平、兩臂夾角約 110°</li>
+        <li>示範版將管件架在水面上方，兩道出水直接打在水面激起漣漪</li>
+      </ul>
+      <h2>物理觀察：</h2>
+      <ul>
+        <li>缸內 3D 流場：水柱打進水面 → 下潛 → 沿缸底外擴 → 缸壁上升 → 表面回流的立體翻轉環流</li>
+        <li>示蹤粒子在整個水體中被 3D 平流：表層珊瑚橘、越深越暗紫紅（可讀出深度）</li>
+        <li>紅色染料（色素）從出水口注入表面薄膜，被水流帶著走、形成環流與漩渦</li>
+        <li>在水面上拖曳滑鼠可以直接攪動水流與染料</li>
+        <li>浮球具重力＋浮力物理，會隨波晃動、可用滑鼠拖曳；「物理物件」可切換球／方塊／環結／鴨子</li>
+        <li>流場模型：40×20×40 格 3D Stable Fluids（噴流動量 → 平流 → 壓力投影），解析度粗、屬定性展示；粒子最後疊繪，偶爾會蓋到物件屬視覺化取捨</li>
+      </ul>
+      <h2>操作方式：</h2>
+      <ul>
+        <li>在水面上拖曳可畫出漣漪</li>
+        <li>拖曳背景可旋轉視角，滾輪縮放</li>
+        <li>視角可以潛入水面下觀察</li>
+        <li>空白鍵：暫停 / 繼續；G 鍵：切換重力</li>
+        <li>L 鍵：以目前視角設定光源方向</li>
+        <li>左上「控制面板」：出水強度、示蹤粒子、物理物件、缸內尺寸</li>
+      </ul>
+      <h2>渲染技術：</h2>
+      <ul>
+        <li>GPU 波動方程水面模擬（ping-pong heightmap）</li>
+        <li>光線追蹤反射與折射（Fresnel 混合）</li>
+        <li>即時焦散（differential area method）</li>
+        <li>解析式環境光遮蔽與軟陰影</li>
+      </ul>
+      <p>
+        <small>
+          水體渲染基於
+          <a
+            href="https://github.com/jeantimex/threejs-water"
+            target="_blank"
+            rel="noopener noreferrer"
+          >jeantimex/threejs-water</a>
+          （Three.js 移植：
+          <a href="https://github.com/jeantimex" target="_blank" rel="noopener noreferrer">Yong Su</a>）
+          與
+          <a href="http://madebyevan.com/" target="_blank" rel="noopener noreferrer">Evan Wallace</a>
+          的 WebGL Water，MIT License。磁磚貼圖來自
+          <a
+            href="http://www.flickr.com/photos/zooboing/3682834083/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >zooboing</a>。
+        </small>
+      </p>
+    </div>
+    <div id="help-toggle" class="material-icons">menu</div>
+    <a id="home-link" href="../" title="回 Demo 導覽首頁">← 首頁</a>
+    <div id="app"></div>
+    <div id="loading">載入中…</div>
+  </body>
+</html>

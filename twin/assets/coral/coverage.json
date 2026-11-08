@@ -1,0 +1,182 @@
+{
+ "observation": "T0",
+ "date": "2026-05",
+ "site": "示範場域海水缸",
+ "method": "YOLO11-seg 實例分割遮罩之珊瑚像素（類別 0–7，不含小丑魚）占畫面總像素之比例；逐張與人工圈選比對",
+ "source": "table_coverage_23.csv（驗證集 23 張，5312×2988）",
+ "n_images": 23,
+ "image_size": [
+  5312,
+  2988
+ ],
+ "auto_mean_pct": 16.154,
+ "manual_mean_pct": 15.701,
+ "mae_pp": 0.513,
+ "std_pp": 0.456,
+ "mean_signed_bias_pp": 0.453,
+ "mean_iou": 0.8952,
+ "mean_error_rate_pct": 3.68,
+ "per_image": [
+  {
+   "image": "frame_0003.jpg",
+   "manual_pct": 15.388,
+   "auto_pct": 15.875,
+   "abs_error_pp": 0.487,
+   "iou": 0.9308
+  },
+  {
+   "image": "frame_0021.jpg",
+   "manual_pct": 8.046,
+   "auto_pct": 8.866,
+   "abs_error_pp": 0.82,
+   "iou": 0.8858
+  },
+  {
+   "image": "frame_0038.jpg",
+   "manual_pct": 10.08,
+   "auto_pct": 10.202,
+   "abs_error_pp": 0.122,
+   "iou": 0.9404
+  },
+  {
+   "image": "frame_0047.jpg",
+   "manual_pct": 12.126,
+   "auto_pct": 12.532,
+   "abs_error_pp": 0.406,
+   "iou": 0.9486
+  },
+  {
+   "image": "frame_0060.jpg",
+   "manual_pct": 19.447,
+   "auto_pct": 20.084,
+   "abs_error_pp": 0.638,
+   "iou": 0.9546
+  },
+  {
+   "image": "frame_0063.jpg",
+   "manual_pct": 12.3,
+   "auto_pct": 12.937,
+   "abs_error_pp": 0.637,
+   "iou": 0.9436
+  },
+  {
+   "image": "frame_0064.jpg",
+   "manual_pct": 7.553,
+   "auto_pct": 7.89,
+   "abs_error_pp": 0.337,
+   "iou": 0.9528
+  },
+  {
+   "image": "frame_0065.jpg",
+   "manual_pct": 7.005,
+   "auto_pct": 7.228,
+   "abs_error_pp": 0.223,
+   "iou": 0.9575
+  },
+  {
+   "image": "frame_0069.jpg",
+   "manual_pct": 17.378,
+   "auto_pct": 17.449,
+   "abs_error_pp": 0.071,
+   "iou": 0.9329
+  },
+  {
+   "image": "frame_0076.jpg",
+   "manual_pct": 26.505,
+   "auto_pct": 27.569,
+   "abs_error_pp": 1.064,
+   "iou": 0.9504
+  },
+  {
+   "image": "frame_0080.jpg",
+   "manual_pct": 17.027,
+   "auto_pct": 17.062,
+   "abs_error_pp": 0.034,
+   "iou": 0.949
+  },
+  {
+   "image": "frame_0083.jpg",
+   "manual_pct": 16.157,
+   "auto_pct": 16.692,
+   "abs_error_pp": 0.535,
+   "iou": 0.9446
+  },
+  {
+   "image": "frame_0089.jpg",
+   "manual_pct": 22.729,
+   "auto_pct": 22.191,
+   "abs_error_pp": 0.538,
+   "iou": 0.8989
+  },
+  {
+   "image": "frame_0090.jpg",
+   "manual_pct": 25.069,
+   "auto_pct": 25.199,
+   "abs_error_pp": 0.13,
+   "iou": 0.884
+  },
+  {
+   "image": "frame_0103.jpg",
+   "manual_pct": 14.971,
+   "auto_pct": 15.206,
+   "abs_error_pp": 0.234,
+   "iou": 0.9498
+  },
+  {
+   "image": "frame_0106.jpg",
+   "manual_pct": 16.412,
+   "auto_pct": 18.386,
+   "abs_error_pp": 1.974,
+   "iou": 0.886
+  },
+  {
+   "image": "frame_0107.jpg",
+   "manual_pct": 20.721,
+   "auto_pct": 21.795,
+   "abs_error_pp": 1.075,
+   "iou": 0.911
+  },
+  {
+   "image": "frame_0110.jpg",
+   "manual_pct": 10.039,
+   "auto_pct": 11.204,
+   "abs_error_pp": 1.165,
+   "iou": 0.8774
+  },
+  {
+   "image": "frame_0113.jpg",
+   "manual_pct": 16.33,
+   "auto_pct": 16.597,
+   "abs_error_pp": 0.267,
+   "iou": 0.9683
+  },
+  {
+   "image": "frame_0114.jpg",
+   "manual_pct": 19.421,
+   "auto_pct": 19.779,
+   "abs_error_pp": 0.358,
+   "iou": 0.9726
+  },
+  {
+   "image": "frame_0115.jpg",
+   "manual_pct": 22.2,
+   "auto_pct": 22.406,
+   "abs_error_pp": 0.205,
+   "iou": 0.9789
+  },
+  {
+   "image": "frame_0119.jpg",
+   "manual_pct": 24.074,
+   "auto_pct": 24.395,
+   "abs_error_pp": 0.321,
+   "iou": 0.9717
+  },
+  {
+   "image": "frame_0127.jpg",
+   "manual_pct": 0.151,
+   "auto_pct": 0.0,
+   "abs_error_pp": 0.151,
+   "iou": 0.0
+  }
+ ]
+}

@@ -1,0 +1,615 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<title>環境監測 — 珊瑚礁數位孿生平台</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="icon" type="image/png" href="cihci.png" />
+<meta http-equiv="cache-control" content="no-store, no-cache, must-revalidate, max-age=0" />
+<meta http-equiv="pragma" content="no-cache" />
+<meta http-equiv="expires" content="0" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+        colors: {
+          ink:    { 950:'#f8fafc', 900:'#f1f5f9', 800:'#e2e8f0', 700:'#cbd5e1', 600:'#94a3b8' },
+          fog:    { 100:'#1e293b', 200:'#334155', 300:'#475569', 400:'#64748b', 500:'#94a3b8' },
+          coral:  { 300:'#fdba74', 400:'#fb923c', 500:'#f97316', 600:'#ea580c' },
+          warn:   { 400:'#fbbf24' },
+          danger: { 400:'#f87171' },
+          ok:     { 400:'#34d399' },
+        },
+        boxShadow: { card: '0 1px 3px rgba(0,0,0,.08), 0 4px 12px -4px rgba(0,0,0,.12)' }
+      }
+    }
+  };
+</script>
+<style>
+  html, body { font-family: 'Inter', system-ui, sans-serif; }
+  body { background: #ffffff; color:#1e293b; }
+  .reading-value { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+  .demo-tag {
+    font-size: 9px; letter-spacing: .08em; text-transform: uppercase;
+    color: #94a3b8; background:#f8fafc; border:1px solid #e2e8f0;
+    padding: 2px 6px; border-radius: 4px;
+  }
+  .badge-demo {
+    background: rgba(249, 115, 22, .1); color:#ea580c; border:1px solid rgba(249, 115, 22, .3);
+    padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight:600; letter-spacing:.04em;
+  }
+  .seg-btn { transition: all .15s ease; }
+  .seg-btn.active { background:#ffffff; color:#1e293b; box-shadow: inset 0 0 0 1px #cbd5e1; }
+  .seg-btn:not(.active):hover { color:#475569; }
+  .pulse-dot { animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
+  .trend-up   { color:#f87171; }
+  .trend-down { color:#34d399; }
+  .trend-flat { color:#94a3b8; }
+  .ico { width:14px; height:14px; display:inline-block; vertical-align:-2px; }
+  .modal-backdrop { background: rgba(0,0,0,.3); backdrop-filter: blur(2px); }
+  .chart-wrap { position: relative; height: 200px; }
+  /* 水位示意：波浪左右流動、氣泡上升；系統設定減少動態效果時停用 */
+  @keyframes wave-x { from { transform: translateX(0); } to { transform: translateX(-48px); } }
+  .tank-wave-front { animation: wave-x 3.6s linear infinite; }
+  .tank-wave-back  { animation: wave-x 6s linear infinite reverse; }
+  @keyframes bubble-rise {
+    0%   { transform: translateY(0) scale(.6); opacity: 0; }
+    15%  { opacity: .9; }
+    85%  { opacity: .8; }
+    100% { transform: translateY(var(--rise)) scale(1); opacity: 0; }
+  }
+  .tank-bubble { fill: none; stroke: #0ea5e9; stroke-width: 1.2; opacity: 0; transform-box: fill-box; transform-origin: center; animation: bubble-rise var(--dur) ease-in infinite; }
+  @keyframes pointer-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
+  .tank-pointer { animation: pointer-bob 2.4s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) { .tank-wave-front, .tank-wave-back, .tank-bubble, .tank-pointer { animation: none; } .tank-bubble { opacity: .7; } }
+  /* ── 頁首導覽（各頁共用同一份樣式，目前頁面以橘色標示）── */
+  .site-nav { display: flex; align-items: center; gap: .5rem; margin-left: auto; min-width: 0; font-size: 12px; white-space: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .site-nav::-webkit-scrollbar { display: none; }
+  .site-nav a { display: inline-flex; align-items: center; gap: .375rem; flex-shrink: 0; padding: .375rem .75rem; border-radius: .5rem; border: 1px solid #e2e8f0; background: #ffffff; color: #64748b; text-decoration: none; transition: color .15s, border-color .15s, background-color .15s; }
+  .site-nav a:hover { color: #1e293b; border-color: #cbd5e1; }
+  .site-nav a[aria-current="page"] { background: rgba(249, 115, 22, .1); border-color: rgba(249, 115, 22, .35); color: #ea580c; font-weight: 500; }
+  .site-nav svg { width: 14px; height: 14px; flex-shrink: 0; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- Top bar -->
+<header class="px-5 py-3 border-b border-ink-800/80 flex items-center gap-4">
+  <div class="flex items-center gap-3">
+    <img src="cihci.png" alt="CIHCI Lab" class="w-9 h-9 rounded-lg object-contain" />
+    <div>
+      <div class="text-[15px] font-semibold tracking-tight">珊瑚礁數位孿生平台</div>
+      <div class="text-[11px] text-fog-500">環境監測 · Environmental Monitoring</div>
+    </div>
+  </div>
+  <nav class="site-nav" aria-label="頁面導覽">
+    <a href="../"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>首頁</a>
+    <a href="./"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>3D 數位孿生</a>
+    <a href="environment.html" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>環境監測</a>
+    <a href="../ted/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 12c1-3 4-5 8-5 4 0 7 2 7.5 5-.5 3-3.5 5-7.5 5-4 0-7-2-8-5Z"/><path d="M6.5 12 2 8v8l4.5-4"/><circle cx="17" cy="11" r="1"/></svg>實驗場域</a>
+  </nav>
+</header>
+
+<!-- Section header -->
+<section class="px-6 pt-5 pb-3 flex items-end gap-3">
+  <h1 class="text-[18px] font-semibold tracking-tight">環境監測</h1>
+  <div class="ml-auto flex items-center gap-2">
+    <!-- Time range -->
+    <div class="flex bg-ink-900/80 border border-ink-800 rounded-lg p-0.5 text-[12px] text-fog-400">
+      <button data-range="24h" class="seg-btn px-3 py-1 rounded-md">24h</button>
+      <button data-range="7d"  class="seg-btn px-3 py-1 rounded-md">7d</button>
+      <button data-range="30d" class="seg-btn px-3 py-1 rounded-md active">30d</button>
+    </div>
+    <!-- Alert settings (placeholder) -->
+    <button id="alert-settings" title="警報設定"
+      class="w-8 h-8 grid place-items-center rounded-lg bg-ink-900/80 border border-ink-800 text-fog-400 hover:text-fog-200 hover:border-ink-700">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+    </button>
+  </div>
+</section>
+
+<!-- Readings cards -->
+<section class="px-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+  <!-- 水溫 -->
+  <div class="reading-card bg-ink-900/60 rounded-xl border border-ink-800 shadow-card p-4 relative">
+    <div class="flex items-center gap-2 text-fog-400 text-[12px]">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0Z"/></svg>
+      <span>水溫</span>
+    </div>
+    <div class="mt-2 flex items-baseline gap-1.5">
+      <span id="r-sst" class="reading-value text-3xl font-semibold tracking-tight">—</span>
+      <span class="text-fog-400 text-[13px]">°C</span>
+      <span id="d-sst" class="trend-flat text-[12px] ml-auto tabular-nums">—</span>
+    </div>
+  </div>
+  <!-- 比重 -->
+  <div class="reading-card bg-ink-900/60 rounded-xl border border-ink-800 shadow-card p-4 relative">
+    <div class="flex items-center gap-2 text-fog-400 text-[12px]">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12s3-6 9-6 9 6 9 6-3 6-9 6-9-6-9-6Z"/><circle cx="12" cy="12" r="2"/></svg>
+      <span>比重 SG</span>
+    </div>
+    <div class="mt-2 flex items-baseline gap-1.5">
+      <span id="r-sg" class="reading-value text-3xl font-semibold tracking-tight">—</span>
+      <span id="d-sg" class="trend-flat text-[12px] ml-auto tabular-nums">—</span>
+    </div>
+  </div>
+  <!-- 氮 N -->
+  <div class="reading-card bg-ink-900/60 rounded-xl border border-ink-800 shadow-card p-4 relative">
+    <div class="flex items-center gap-2 text-fog-400 text-[12px]">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14.5 2v17.5c0 1.4-1.1 2.5-2.5 2.5s-2.5-1.1-2.5-2.5V2"/><path d="M8.5 2h7"/><path d="M14.5 16h-5"/></svg>
+      <span>氮 N</span>
+    </div>
+    <div class="mt-2 flex items-baseline gap-1.5">
+      <span id="r-n" class="reading-value text-3xl font-semibold tracking-tight">—</span>
+      <span class="text-fog-400 text-[13px]">ppm</span>
+      <span id="d-n" class="trend-flat text-[12px] ml-auto tabular-nums">—</span>
+    </div>
+  </div>
+  <!-- 磷 P -->
+  <div class="reading-card bg-ink-900/60 rounded-xl border border-ink-800 shadow-card p-4 relative">
+    <div class="flex items-center gap-2 text-fog-400 text-[12px]">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 2v7.31"/><path d="M14 9.3V2"/><path d="M8.5 2h7"/><path d="M14 9.3a6.5 6.5 0 1 1-4 0"/></svg>
+      <span>磷 P</span>
+    </div>
+    <div class="mt-2 flex items-baseline gap-1.5">
+      <span id="r-p" class="reading-value text-3xl font-semibold tracking-tight">—</span>
+      <span class="text-fog-400 text-[13px]">ppm</span>
+      <span id="d-p" class="trend-flat text-[12px] ml-auto tabular-nums">—</span>
+    </div>
+  </div>
+</section>
+
+<!-- Trend charts -->
+<section class="px-6 mt-5 mb-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
+  <div class="bg-ink-900/60 rounded-xl border border-ink-800 shadow-card p-4">
+    <div class="flex items-center justify-between text-[12px] text-fog-400 mb-2">
+      <span>水溫趨勢</span>
+      <span class="text-fog-500" id="range-label-sst">近 30 天</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-sst"></canvas></div>
+  </div>
+  <div class="bg-ink-900/60 rounded-xl border border-ink-800 shadow-card p-4">
+    <div class="flex items-center justify-between text-[12px] text-fog-400 mb-2">
+      <span>比重趨勢</span>
+      <span class="text-fog-500" id="range-label-sg">近 30 天</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-sg"></canvas></div>
+  </div>
+  <div class="bg-ink-900/60 rounded-xl border border-ink-800 shadow-card p-4">
+    <div class="flex items-center justify-between text-[12px] text-fog-400 mb-2">
+      <span>氮趨勢</span>
+      <span class="text-fog-500" id="range-label-n">近 30 天</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-n"></canvas></div>
+  </div>
+  <div class="bg-ink-900/60 rounded-xl border border-ink-800 shadow-card p-4">
+    <div class="flex items-center justify-between text-[12px] text-fog-400 mb-2">
+      <span>磷趨勢</span>
+      <span class="text-fog-500" id="range-label-p">近 30 天</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-p"></canvas></div>
+  </div>
+</section>
+
+<!-- 水位、燈光排程 -->
+<section class="px-6 mb-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
+  <!-- 水位卡高度跟著燈光卡：動畫與長條圖用絕對定位填滿，不自己撐高 -->
+  <div class="bg-ink-900/60 rounded-xl border border-ink-800 shadow-card p-4 flex flex-col">
+    <div class="flex items-center gap-2 text-fog-400 text-[12px] mb-2">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 6c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><path d="M2 12c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><path d="M12 15v6"/><path d="m9 18 3 3 3-3"/></svg>
+      <span>水位</span>
+    </div>
+    <!-- 左：水位動畫；右：補水量長條圖（高度跟著動畫） -->
+    <div class="flex-1 grid grid-cols-1 sm:grid-cols-[230px_minmax(0,1fr)] gap-3 min-h-[180px]">
+      <div class="relative min-h-[160px]">
+        <svg id="ato-svg" viewBox="30 10 150 148" preserveAspectRatio="xMinYMid meet" class="absolute inset-0 w-full h-full" role="img" aria-label="水位示意圖：目前水位與正常範圍"></svg>
+      </div>
+      <div class="flex flex-col min-w-0">
+        <div class="flex items-center justify-between text-[11px] text-fog-500 mb-1"><span>補水量</span><span id="ato-range-label">—</span></div>
+        <div class="relative flex-1 min-h-[140px]"><canvas id="chart-ato"></canvas></div>
+      </div>
+    </div>
+  </div>
+  <div class="bg-ink-900/60 rounded-xl border border-ink-800 shadow-card p-4">
+    <div class="flex items-center gap-2 text-[12px] text-fog-400 mb-2">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+      <span>燈光排程</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-light"></canvas></div>
+    <div id="light-legend" class="flex flex-wrap gap-x-5 gap-y-1 mt-2 text-[11px] text-fog-400"></div>
+  </div>
+</section>
+
+<!-- Alert settings modal -->
+<div id="modal" class="hidden fixed inset-0 modal-backdrop z-50 grid place-items-center p-4">
+  <div class="bg-white border border-ink-800 rounded-xl shadow-card max-w-sm w-full p-5">
+    <div class="flex items-center gap-2 mb-2">
+      <svg class="ico text-coral-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <div class="text-[14px] font-semibold">自訂警報</div>
+      <button id="modal-close" class="ml-auto text-fog-500 hover:text-fog-200 text-lg leading-none">×</button>
+    </div>
+    <div class="text-[13px] text-fog-300">功能即將推出：可設定環境指標的自訂警報閾值（如水溫 &gt; 29°C、氮 &gt; 10 ppm）。</div>
+    <button id="modal-ok" class="mt-4 w-full py-2 rounded-md bg-coral-500 hover:bg-coral-600 text-white text-[13px] font-medium">了解</button>
+  </div>
+</div>
+
+<script>
+// =========================================
+//  Data loading + state
+// =========================================
+const STATE = {
+  data: null,
+  range: '30d',
+  charts: {},
+  current: { sst:0, sg:0, n:0, p:0, t:null },
+  prev:    { sst:0, sg:0, n:0, p:0 },
+};
+
+const KEYS = ['sst', 'sg', 'n', 'p'];
+const FMT = {
+  sst: v => v.toFixed(2),
+  sg:  v => v.toFixed(4),
+  n:   v => v.toFixed(1),
+  p:   v => v.toFixed(2),
+};
+const UNITS = { sst: '°C', sg: '', n: 'ppm', p: 'ppm' };
+const FLAT_EPS = { sst: 0.005, sg: 0.00005, n: 0.05, p: 0.005 }; // 變化小於此值顯示「持平」
+// 圖上的警戒虛線：水溫白化、氮磷優養化
+const THRESHOLDS = {
+  sst: { v: 29.0, label: '白化警戒 · 29 °C' },
+  n:   { v: 10,   label: '警戒 · 10 ppm' },
+  p:   { v: 0.20, label: '警戒 · 0.20 ppm' },
+};
+
+// =========================================
+//  Time-series slicing
+// =========================================
+function getSeries(range) {
+  const d = STATE.data;
+  if (range === '24h') return d.history_24h;
+  if (range === '7d')  return d.history_30d.slice(-24*7 - 1);
+  return d.history_30d;
+}
+
+// =========================================
+//  Chart factory
+// =========================================
+function pointBgFor(key, val) {
+  if (key === 'sst' && val >= 28.5) return '#f87171';
+  return 'transparent';
+}
+function pointRadiusFor(key, val) {
+  if (key === 'sst' && val >= 28.5) return 3;
+  return 0;
+}
+
+function buildChart(canvasId, key, color, axis) {
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  return new Chart(ctx, {
+    type: 'line',
+    data: { datasets: [{
+      label: key.toUpperCase(),
+      data: [],
+      borderColor: color,
+      borderWidth: 1.4,
+      tension: 0.25,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      pointBackgroundColor: ctx2 => {
+        const i = ctx2.dataIndex; const p = ctx2.dataset.data[i];
+        return p ? pointBgFor(key, p.y) : 'transparent';
+      },
+      pointRadiusCallback: undefined,
+      fill: { target: 'origin', above: hexToRgba(color, 0.06) },
+    }]},
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderWidth: 1,
+          titleColor: '#1e293b', bodyColor: '#475569', padding: 8,
+          displayColors: false,
+          callbacks: {
+            title: items => new Date(items[0].parsed.x).toLocaleString(),
+            label: ctx2 => ` ${FMT[key](ctx2.parsed.y)} ${UNITS[key]}`.trimEnd(),
+          }
+        },
+      },
+      scales: {
+        x: { type: 'time',
+             time: { displayFormats: { hour: 'MM/dd HH:mm', day: 'MM/dd', minute: 'HH:mm' } },
+             ticks: { color: '#94a3b8', maxRotation: 0, autoSkipPadding: 18, font: { size: 10 } },
+             grid:  { color: 'rgba(226,232,240,.6)', drawBorder: false } },
+        y: { ticks: { color: '#94a3b8', font: { size: 10 } },
+             grid: { color: 'rgba(226,232,240,.6)', drawBorder: false },
+             suggestedMin: axis.min, suggestedMax: axis.max },
+      },
+    },
+    plugins: THRESHOLDS[key] ? [thresholdLinePlugin(THRESHOLDS[key])] : [],
+  });
+}
+
+const thresholdLinePlugin = (th) => ({
+  id: 'thresholdLine',
+  afterDatasetsDraw(chart) {
+    const yScale = chart.scales.y; const xScale = chart.scales.x;
+    const y = yScale.getPixelForValue(th.v);
+    if (!isFinite(y) || y < chart.chartArea.top || y > chart.chartArea.bottom) return; // 警戒值不在圖表範圍內就不畫
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.strokeStyle = '#f87171'; ctx.lineWidth = 1; ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.moveTo(xScale.left, y); ctx.lineTo(xScale.right, y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#ef4444'; ctx.font = '10px Inter, sans-serif';
+    ctx.fillText(th.label, xScale.left + 6, y - 4);
+    ctx.restore();
+  }
+});
+
+function hexToRgba(hex, a) {
+  const h = hex.replace('#',''); const n = parseInt(h, 16);
+  const r = (n>>16)&255, g=(n>>8)&255, b=n&255;
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+// =========================================
+//  Render
+// =========================================
+function setReading(key, val) {
+  const prev = STATE.prev[key];
+  STATE.prev[key] = STATE.current[key];
+  STATE.current[key] = val;
+  document.getElementById('r-'+key).textContent = FMT[key](val);
+  const d = document.getElementById('d-'+key);
+  const delta = val - prev;
+  if (Math.abs(delta) < FLAT_EPS[key]) { d.className='trend-flat text-[12px] ml-auto tabular-nums'; d.textContent='→ ±'+FMT[key](0); }
+  else if (delta > 0) { d.className='trend-up text-[12px] ml-auto tabular-nums'; d.textContent='▲ +'+FMT[key](Math.abs(delta)); }
+  else                { d.className='trend-down text-[12px] ml-auto tabular-nums'; d.textContent='▼ -'+FMT[key](Math.abs(delta)); }
+}
+
+function refreshCharts() {
+  const s = getSeries(STATE.range);
+  const make = key => s.map(p => ({ x: new Date(p.t).getTime(), y: p[key] }));
+  KEYS.forEach(k => { STATE.charts[k].data.datasets[0].data = make(k); });
+  const sstData = STATE.charts.sst.data.datasets[0].data;
+  STATE.charts.sst.data.datasets[0].pointRadius = sstData.map(p => p.y >= 28.5 ? 3 : 0);
+  Object.values(STATE.charts).forEach(c => c.update('none'));
+  const label = STATE.range === '24h' ? '近 24 小時' : STATE.range === '7d' ? '近 7 天' : '近 30 天';
+  KEYS.forEach(k => document.getElementById('range-label-'+k).textContent = label);
+  refreshAtoChart();
+}
+
+function setRange(r) {
+  STATE.range = r;
+  document.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('active', b.dataset.range === r));
+  refreshCharts();
+}
+
+// =========================================
+//  Live update simulation: every 30s ±0.1
+// =========================================
+function jitter(amp) { return (Math.random()*2 - 1) * amp; }
+
+
+// ── 水位（自動補水器）與燈光排程 ──
+const ATO_ZONES = { high: '偏高', ok: '正常', low: '偏低' };
+// 依當下時間在排程節點間線性內插（22 點之後接回 0 點）
+function lightAt(light, ch, hour) {
+  const hs = light.hours, vs = ch.values;
+  for (let i = 0; i < hs.length; i++) {
+    const h0 = hs[i], h1 = i + 1 < hs.length ? hs[i + 1] : 24;
+    if (hour >= h0 && hour <= h1) return vs[i] + (vs[(i + 1) % vs.length] - vs[i]) * (hour - h0) / (h1 - h0);
+  }
+  return 0;
+}
+// 下一次開始漸亮的時間（節點值為 0、下一個節點 > 0）
+function lightRampStart(light) {
+  const ch = light.channels[0];
+  const i = ch.values.findIndex((v, k) => v === 0 && ch.values[(k + 1) % ch.values.length] > 0);
+  return i < 0 ? null : light.hours[i];
+}
+function nowHour() { const d = new Date(); return d.getHours() + d.getMinutes() / 60; }
+const pad2 = (n) => String(n).padStart(2, '0');
+
+// 水位示意（線條扁平風）：開口魚缸剖面，水面線條流動、氣泡上升；右側刻度標出正常範圍與目前水位
+const ATO_LEVEL = { high: 86, ok: 62, low: 34 };   // 各區段畫在缸內的水位高度（%）
+const ATO_BAND = [48, 76];                          // 正常範圍（%）
+function renderAto(ato) {
+  const z = ato.zone in ATO_ZONES ? ato.zone : 'ok';
+  const T = { x: 34, y: 16, w: 110, h: 136, sand: 6 };   // sand：0% 水位離缸底的邊距
+  const R = T.x + T.w;                                      // 缸右緣；指標、刻度都相對它擺
+  const bottom = T.y + T.h, sandY = bottom - T.sand;
+  const yOf = (pct) => sandY - (sandY - T.y) * pct / 100;
+  const level = yOf(ATO_LEVEL[z]), bandTop = yOf(ATO_BAND[1]), bandBot = yOf(ATO_BAND[0]);
+  // 兩個週期以上的正弦線，往左平移一個週期（48px）即可無縫循環
+  const waveLine = (amp, phase) => {
+    let d = '';
+    for (let x = T.x - 60; x <= T.x + T.w + 60; x += 4) d += `${d ? ' L' : 'M'}${x} ${(level + amp * Math.sin((x / 48) * 2 * Math.PI + phase)).toFixed(2)}`;
+    return d;
+  };
+  const front = waveLine(2.4, 0);
+  const bubbles = [[0.24, 0, 4.2, 2.4], [0.47, 1.4, 5.0, 1.8], [0.67, 2.6, 4.6, 2.8], [0.84, 0.8, 5.6, 2]]
+    .map(([f, delay, dur, r]) => `<circle class="tank-bubble" cx="${(T.x + f * T.w).toFixed(1)}" cy="${sandY - 6}" r="${r}" style="--rise:${(level + 8 - (sandY - 6)).toFixed(0)}px;--dur:${dur}s;animation-delay:${delay}s"/>`).join('');
+  const ticks = Array.from({ length: 11 }, (_, i) => {
+    const y = yOf(i * 10), major = i % 5 === 0;
+    return `<line x1="${R + (major ? 20 : 23)}" y1="${y}" x2="${R + 28}" y2="${y}"/>`;
+  }).join('');
+  const L = 'fill="none" stroke-linecap="round" stroke-linejoin="round"';
+  document.getElementById('ato-svg').innerHTML = `
+    <defs><clipPath id="tank-clip"><path d="M${T.x} ${T.y} V${bottom - 12} Q${T.x} ${bottom} ${T.x + 12} ${bottom} H${T.x + T.w - 12} Q${T.x + T.w} ${bottom} ${T.x + T.w} ${bottom - 12} V${T.y} Z"/></clipPath></defs>
+    <g clip-path="url(#tank-clip)">
+      <g class="tank-wave-front"><path d="${front} V${bottom + 4} H${T.x - 60} Z" fill="#e0f2fe"/></g>
+      <path class="tank-wave-back" d="${waveLine(3, 1.6)}" ${L} stroke="#7dd3fc" stroke-width="1.5"/>
+      <path class="tank-wave-front" d="${front}" ${L} stroke="#0ea5e9" stroke-width="2"/>
+      ${bubbles}
+    </g>
+    <path d="M${T.x} ${T.y} V${bottom - 12} Q${T.x} ${bottom} ${T.x + 12} ${bottom} H${T.x + T.w - 12} Q${T.x + T.w} ${bottom} ${T.x + T.w} ${bottom - 12} V${T.y}" ${L} stroke="#475569" stroke-width="2"/>
+    <line x1="${T.x + 6}" y1="${level}" x2="${R + 14}" y2="${level}" stroke="#3b82f6" stroke-width="1" stroke-dasharray="3 3" opacity=".6"/>
+    <g stroke="#cbd5e1">${ticks}<line x1="${R + 28}" y1="${yOf(0)}" x2="${R + 28}" y2="${yOf(100)}"/></g>
+    <line x1="${R + 28}" y1="${bandTop}" x2="${R + 28}" y2="${bandBot}" stroke="#22c55e" stroke-width="4" stroke-linecap="round"/>
+    <g class="tank-pointer"><path d="M${R + 11} ${level - 5} L${R + 18} ${level} L${R + 11} ${level + 5}" ${L} stroke="#2563eb" stroke-width="2"/></g>`;
+}
+
+// 補水量長條圖：跟著上方 24h／7d／30d 切換（24h 每小時、其餘每日）
+function atoSeries() {
+  const a = STATE.data.ato;
+  if (STATE.range === '24h') return { unit: '每小時 · 近 24 小時', rows: a.hourly_24h.map(x => ({ label: `${pad2(new Date(x.t).getHours())}:00`, l: x.l, n: x.n })) };
+  const days = STATE.range === '7d' ? a.daily_30d.slice(-7) : a.daily_30d;
+  return { unit: `每日 · 近 ${days.length} 天`, rows: days.map(x => ({ label: x.d.slice(5).replace('-', '/'), l: x.l, n: x.n })) };
+}
+function buildAtoChart() {
+  return new Chart(document.getElementById('chart-ato').getContext('2d'), {
+    type: 'bar',
+    data: { labels: [], datasets: [{ data: [], backgroundColor: '#7dd3fc', hoverBackgroundColor: '#0ea5e9', borderRadius: 2, maxBarThickness: 14 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderWidth: 1, titleColor: '#1e293b', bodyColor: '#475569', padding: 8, displayColors: false,
+          callbacks: { label: c => ` ${c.parsed.y.toFixed(2)} 升 · ${STATE.atoRows[c.dataIndex].n} 次` },
+        },
+      },
+      scales: {
+        x: { ticks: { color: '#94a3b8', font: { size: 9 }, maxRotation: 0, autoSkipPadding: 8 }, grid: { display: false } },
+        y: { beginAtZero: true, ticks: { color: '#94a3b8', font: { size: 9 }, maxTicksLimit: 4, callback: v => v + ' L' }, grid: { color: 'rgba(226,232,240,.6)' } },
+      },
+    },
+  });
+}
+function refreshAtoChart() {
+  if (!STATE.atoChart) return;
+  const { unit, rows } = atoSeries();
+  STATE.atoRows = rows;
+  STATE.atoChart.data.labels = rows.map(r => r.label);
+  STATE.atoChart.data.datasets[0].data = rows.map(r => r.l);
+  STATE.atoChart.update('none');
+  document.getElementById('ato-range-label').textContent = unit;
+}
+
+const nowLinePlugin = {
+  id: 'nowLine',
+  afterDatasetsDraw(chart) {
+    const x = chart.scales.x.getPixelForValue(nowHour()), a = chart.chartArea, ctx = chart.ctx;
+    ctx.save();
+    ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(x, a.top); ctx.lineTo(x, a.bottom); ctx.stroke();
+    ctx.setLineDash([]); ctx.fillStyle = '#ef4444'; ctx.font = '10px Inter, sans-serif';
+    ctx.fillText('現在', Math.min(x + 4, a.right - 24), a.top + 10);
+    ctx.restore();
+  }
+};
+
+function buildLightChart(light) {
+  return new Chart(document.getElementById('chart-light').getContext('2d'), {
+    type: 'line',
+    data: { datasets: light.channels.map(ch => ({
+      label: ch.name,
+      data: [...light.hours, 24].map((h, i) => ({ x: h, y: ch.values[i % ch.values.length] })),
+      borderColor: ch.color, borderWidth: 2, cubicInterpolationMode: 'monotone',
+      pointRadius: 3, pointBackgroundColor: '#ffffff', pointBorderColor: ch.color, pointBorderWidth: 1.5,
+    })) },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderWidth: 1,
+          titleColor: '#1e293b', bodyColor: '#475569', padding: 8,
+          callbacks: { title: items => `${pad2(items[0].parsed.x % 24)}:00`, label: c => ` ${c.dataset.label} ${c.parsed.y}%` },
+        },
+      },
+      scales: {
+        x: { type: 'linear', min: 0, max: 24, ticks: { stepSize: 2, color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(226,232,240,.6)' } },
+        y: { min: 0, max: 100, ticks: { stepSize: 20, color: '#94a3b8', font: { size: 10 }, callback: v => v + '%' }, grid: { color: 'rgba(226,232,240,.6)' } },
+      },
+    },
+    plugins: [nowLinePlugin],
+  });
+}
+
+function updateLight() {
+  const light = STATE.data.light, h = nowHour();
+  const cur = light.channels.map(ch => ({ ch, v: Math.round(lightAt(light, ch, h)) }));
+  document.getElementById('light-legend').innerHTML = cur.map(({ ch, v }) =>
+    `<span class="flex items-center gap-1.5"><span style="display:inline-block;width:12px;height:3px;border-radius:2px;background:${ch.color}"></span>` +
+    `${ch.name} 最高 ${Math.max(...ch.values)}% · 現在 <b class="text-fog-200">${v}%</b></span>`).join('');
+  if (STATE.lightChart) STATE.lightChart.update('none');  // 重畫「現在」線
+}
+
+function tick() {
+  const c = STATE.current;
+  const next = {
+    sst: clamp(c.sst + jitter(0.02), 18, 32),
+    sg:  clamp(c.sg  + jitter(0.00004), 1.0235, 1.0265),
+    n:   clamp(c.n   + jitter(0.1), 2, 15),
+    p:   clamp(c.p   + jitter(0.005), 0.02, 0.3),
+  };
+  KEYS.forEach(k => setReading(k, next[k]));
+  updateLight();
+
+  const t = new Date();
+  STATE.current.t = t.toISOString();
+
+  if (STATE.range === '24h') {
+    KEYS.forEach(k => {
+      const ds = STATE.charts[k].data.datasets[0];
+      ds.data.push({ x: t.getTime(), y: next[k] });
+      if (ds.data.length > 200) ds.data.shift();
+      if (k === 'sst') STATE.charts.sst.data.datasets[0].pointRadius = ds.data.map(p => p.y >= 28.5 ? 3 : 0);
+    });
+    Object.values(STATE.charts).forEach(c => c.update('none'));
+  }
+}
+function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+// =========================================
+//  Boot
+// =========================================
+async function main() {
+  const r = await fetch('environment_data.json');
+  STATE.data = await r.json();
+
+  const c = STATE.data.current;
+  STATE.current = { sst: c.sst, sg: c.sg, n: c.n, p: c.p, t: c.t };
+  STATE.prev    = { ...STATE.current };
+  KEYS.forEach(k => setReading(k, c[k]));
+
+  STATE.charts.sst = buildChart('chart-sst', 'sst', '#f87171', { min: 22, max: 25 });
+  STATE.charts.sg  = buildChart('chart-sg',  'sg',  '#34d399', { min: 1.024, max: 1.026 });
+  STATE.charts.n   = buildChart('chart-n',   'n',   '#60a5fa', { min: 4, max: 11 });
+  STATE.charts.p   = buildChart('chart-p',   'p',   '#fbbf24', { min: 0.08, max: 0.22 });
+  refreshCharts();
+
+  document.querySelectorAll('.seg-btn').forEach(b => b.addEventListener('click', () => setRange(b.dataset.range)));
+
+  // Modal
+  const modal = document.getElementById('modal');
+  document.getElementById('alert-settings').addEventListener('click', () => modal.classList.remove('hidden'));
+  document.getElementById('modal-close').addEventListener('click',   () => modal.classList.add('hidden'));
+  document.getElementById('modal-ok').addEventListener('click',      () => modal.classList.add('hidden'));
+  modal.addEventListener('click', e => { if (e.target === modal) modal.classList.add('hidden'); });
+
+  renderAto(STATE.data.ato);
+  STATE.atoChart = buildAtoChart();
+  refreshAtoChart();
+  STATE.lightChart = buildLightChart(STATE.data.light);
+  updateLight();
+
+  setInterval(tick, 30000);
+}
+main().catch(e => { document.body.innerHTML = '<pre style="color:#fca5a5;padding:20px">'+e+'</pre>'; });
+</script>
+</body>
+</html>

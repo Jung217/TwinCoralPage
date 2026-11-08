@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<title>實驗場域魚群追蹤 — 珊瑚礁數位孿生平台</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="icon" type="image/png" href="../twin/cihci.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+  "@sparkjsdev/spark": "https://cdn.jsdelivr.net/npm/@sparkjsdev/spark@2.0.0/dist/spark.module.js"
+} }
+</script>
+<script>
+  // 與主頁 index.html 相同的（淺色）色票
+  tailwind.config = {
+    theme: { extend: {
+      fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+      colors: {
+        ink:    { 950:'#f8fafc', 900:'#f1f5f9', 800:'#e2e8f0', 700:'#cbd5e1', 600:'#94a3b8' },
+        fog:    { 100:'#1e293b', 200:'#334155', 300:'#475569', 400:'#64748b', 500:'#94a3b8' },
+        coral:  { 300:'#fdba74', 400:'#fb923c', 500:'#f97316', 600:'#ea580c' },
+        warn:   { 400:'#fbbf24' }, danger: { 400:'#f87171' }, ok: { 400:'#34d399' },
+      },
+      boxShadow: { card: '0 1px 3px rgba(0,0,0,.08), 0 4px 12px -4px rgba(0,0,0,.12)' }
+    } }
+  };
+</script>
+<style>
+  html, body { font-family: 'Inter', system-ui, sans-serif; height: 100%; }
+  body { background: #ffffff; color:#1e293b; overflow: hidden; }
+  .badge-demo { background: rgba(249,115,22,.1); color:#ea580c; border:1px solid rgba(249,115,22,.3);
+    padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight:600; letter-spacing:.04em; }
+  .demo-tag { font-size: 9px; letter-spacing: .08em; text-transform: uppercase;
+    color: #94a3b8; background:#f8fafc; border:1px solid #e2e8f0; padding: 2px 6px; border-radius: 4px; }
+  .ico { width:14px; height:14px; display:inline-block; vertical-align:-2px; }
+  .seg-btn { transition: all .15s ease; }
+  .seg-btn.active { background:#ffffff; color:#1e293b; box-shadow: inset 0 0 0 1px #cbd5e1; }
+  .seg-btn:not(.active):hover { color:#475569; }
+  #viewer-root { position: absolute; inset: 0; }
+  #viewer-root canvas { display: block; width: 100% !important; height: 100% !important; }
+  .viewer-overlay { pointer-events: none; }
+  .viewer-overlay > * { pointer-events: auto; }
+  .spinner { width: 36px; height: 36px; border: 3px solid rgba(0,0,0,.08); border-top-color: #fb923c; border-radius: 50%; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .fish { display: grid; grid-template-columns: 12px 1fr auto; gap: 8px; align-items: center; padding: 5px 8px;
+    border-radius: 8px; cursor: pointer; font-size: 12px; color: #334155; transition: background .15s; user-select: none; }
+  .fish:hover { background: #f1f5f9; }
+  .fish.off { opacity: .35; }
+  .fish.following { background: rgba(249,115,22,.08); box-shadow: inset 0 0 0 1px rgba(249,115,22,.35); }
+  .sw { width: 10px; height: 10px; border-radius: 50%; border: 1px solid rgba(0,0,0,.15); }
+  .fish .st { font-size: 10px; color: #94a3b8; }
+  .fish .st.in { color: #10b981; }
+  .tnum { font-variant-numeric: tabular-nums; }
+  @media (max-width: 1023px) {
+    html, body { height: auto; overflow: auto; }
+    body > div.h-full { height: auto; min-height: 100%; }
+    main { display: flex; flex-direction: column; }
+    main > section, main > aside { flex: none; }
+    #viewer-section { min-height: 58vh; }
+    .nav-links { width: 100%; margin-left: 0; }
+    #viewer-toolbar { flex-wrap: wrap; max-width: calc(100% - 24px); }
+    .seg-btn { white-space: nowrap; }
+  }
+  /* ── 頁首導覽（各頁共用同一份樣式，目前頁面以橘色標示）── */
+  .site-nav { display: flex; align-items: center; gap: .5rem; margin-left: auto; min-width: 0; font-size: 12px; white-space: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .site-nav::-webkit-scrollbar { display: none; }
+  .site-nav a { display: inline-flex; align-items: center; gap: .375rem; flex-shrink: 0; padding: .375rem .75rem; border-radius: .5rem; border: 1px solid #e2e8f0; background: #ffffff; color: #64748b; text-decoration: none; transition: color .15s, border-color .15s, background-color .15s; }
+  .site-nav a:hover { color: #1e293b; border-color: #cbd5e1; }
+  .site-nav a[aria-current="page"] { background: rgba(249, 115, 22, .1); border-color: rgba(249, 115, 22, .35); color: #ea580c; font-weight: 500; }
+  .site-nav svg { width: 14px; height: 14px; flex-shrink: 0; }
+</style>
+</head>
+<body class="h-full">
+
+<div class="h-full flex flex-col">
+
+  <!-- Header（與主頁一致） -->
+  <header class="px-5 py-3 border-b border-ink-800/80 flex flex-wrap items-center gap-4 shrink-0">
+    <div class="flex items-center gap-3">
+      <img src="../twin/cihci.png" alt="CIHCI Lab" class="w-9 h-9 rounded-lg object-contain" />
+      <div>
+        <div class="text-[15px] font-semibold tracking-tight">珊瑚礁數位孿生平台</div>
+        <div class="text-[11px] text-fog-500">實驗場域魚群追蹤 · Fish Tracking</div>
+      </div>
+    </div>
+    <nav class="site-nav nav-links" aria-label="頁面導覽">
+      <a href="../"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>首頁</a>
+      <a href="../twin/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>3D 數位孿生</a>
+      <a href="../twin/environment.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>環境監測</a>
+      <a href="./" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 12c1-3 4-5 8-5 4 0 7 2 7.5 5-.5 3-3.5 5-7.5 5-4 0-7-2-8-5Z"/><path d="M6.5 12 2 8v8l4.5-4"/><circle cx="17" cy="11" r="1"/></svg>實驗場域</a>
+    </nav>
+  </header>
+
+  <main class="flex-1 min-h-0 grid grid-cols-12 gap-3 p-3">
+
+    <!-- 左：3D 檢視 -->
+    <section id="viewer-section" class="col-span-12 lg:col-span-7 xl:col-span-8 relative bg-ink-900/60 border border-ink-800 rounded-xl overflow-hidden shadow-card">
+      <div id="viewer-root"><canvas id="c"></canvas></div>
+      <div id="viewer-toolbar" class="viewer-overlay absolute top-3 left-3 z-10 flex items-center gap-2">
+        <div class="flex bg-ink-900/85 backdrop-blur border border-ink-800 rounded-lg p-0.5 text-[12px] text-fog-400">
+          <button id="viewIphone" class="seg-btn active px-3 py-1 rounded-md">平視</button>
+          <button id="viewTop"    class="seg-btn px-3 py-1 rounded-md">俯視</button>
+          <button id="viewSide"   class="seg-btn px-3 py-1 rounded-md">側面</button>
+        </div>
+        <div class="relative" id="opt-dd">
+          <button id="opt-dd-btn" class="flex items-center gap-1.5 text-[12px] text-fog-400 bg-ink-900/85 backdrop-blur border border-ink-800 hover:border-coral-500/50 hover:text-fog-100 rounded-lg px-2.5 py-1">
+            <svg class="ico" style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <span>選項</span>
+            <svg style="width:10px;height:10px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div id="opt-dd-menu" class="hidden absolute top-full left-0 mt-1 bg-ink-900/95 backdrop-blur border border-ink-800 rounded-lg py-1 min-w-[140px] shadow-lg z-50">
+            <label class="flex items-center gap-2 px-3 py-1.5 text-[11px] text-fog-400 hover:bg-ink-800/60 cursor-pointer"><input type="checkbox" id="optTrail" checked class="accent-coral-500 w-3 h-3"><span>軌跡尾巴</span></label>
+            <label class="flex items-center gap-2 px-3 py-1.5 text-[11px] text-fog-400 hover:bg-ink-800/60 cursor-pointer"><input type="checkbox" id="optPip" checked class="accent-coral-500 w-3 h-3"><span>現場畫面</span></label>
+            <label class="flex items-center gap-2 px-3 py-1.5 text-[11px] text-fog-400 hover:bg-ink-800/60 cursor-pointer"><input type="checkbox" id="optSplat" checked class="accent-coral-500 w-3 h-3"><span>珊瑚</span></label>
+            <label class="flex items-center gap-2 px-3 py-1.5 text-[11px] text-fog-400 hover:bg-ink-800/60 cursor-pointer" title="隱藏魚缸範圍外的 3D 場景（玻璃反射、缸外雜點）"><input type="checkbox" id="optCrop" checked class="accent-coral-500 w-3 h-3"><span>裁切缸外</span></label>
+          </div>
+        </div>
+      </div>
+      <div id="msg" class="absolute inset-0 grid place-items-center pointer-events-none">
+        <div class="flex flex-col items-center gap-3 text-[12px] text-fog-400 bg-white/80 rounded-xl px-6 py-5 shadow-card">
+          <div class="spinner"></div><span id="msgText">載入 3DGS 場景中…</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 右：魚群、現場畫面 -->
+    <aside class="col-span-12 lg:col-span-5 xl:col-span-4 flex flex-col gap-3 min-h-0 overflow-auto">
+
+      <section class="bg-ink-800/60 border border-ink-800 rounded-xl shadow-card flex flex-col shrink-0">
+        <div class="px-4 py-3 border-b border-ink-800 flex items-center gap-2">
+          <svg class="ico text-coral-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 12c1-3 4-5 8-5 4 0 7 2 7.5 5-.5 3-3.5 5-7.5 5-4 0-7-2-8-5Z"/><path d="M6.5 12 2 8v8l4.5-4"/><circle cx="17" cy="11" r="1"/></svg>
+          <h2 class="text-[13px] font-semibold">魚群</h2>
+        </div>
+        <div class="px-2 py-2 bg-white/70 rounded-b-xl">
+          <div id="fishList"></div>
+        </div>
+      </section>
+
+      <section id="pip" class="bg-ink-800/60 border border-ink-800 rounded-xl shadow-card flex flex-col shrink-0">
+        <div class="px-4 py-3 border-b border-ink-800 flex items-center gap-2">
+          <svg class="ico text-coral-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="m22 8-6 4 6 4V8Z"/></svg>
+          <h2 class="text-[13px] font-semibold">現場畫面</h2>
+        </div>
+        <div class="p-2 bg-white/70 rounded-b-xl">
+          <video id="ref" src="ref.mp4" muted playsinline preload="auto" class="w-full block rounded-lg"></video>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+import { SparkRenderer, SplatMesh, SplatFileType, SplatEdit, SplatEditSdf, SplatEditSdfType, SplatEditRgbaBlendMode } from '@sparkjsdev/spark';
+
+const $ = (id) => document.getElementById(id);
+const data = await (await fetch('fish_tracks.json')).json();
+const M = data.meta;
+const UP = new THREE.Vector3(...M.up).normalize();
+
+// ── 場景 ──
+// antialias 關閉（與主頁相同）：MSAA 對高斯潑濺幾乎沒效果，內顯上卻很吃效能
+const renderer = new THREE.WebGLRenderer({ canvas: $('c'), antialias: false });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a2a3a); // 與主頁 3D 檢視相同
+const camera = new THREE.PerspectiveCamera(M.cam.vfov, 1, 0.05, 500);
+camera.up.copy(UP);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x334455, 1.6));
+const sun = new THREE.DirectionalLight(0xffffff, 1.4);
+sun.position.copy(UP).multiplyScalar(20);
+scene.add(sun);
+
+const spark = new SparkRenderer({ renderer });
+scene.add(spark);
+const splat = new SplatMesh({ url: './ted_coral.sog', fileType: SplatFileType.PCSOGSZIP });
+scene.add(splat);
+splat.initialized.then(() => { $('msg').remove(); }).catch((e) => { $('msgText').textContent = '場景載入失敗：' + e; });
+
+// ── 裁切缸外：沿 UP 俯視時的魚缸範圍，範圍外的 splat 隱藏（玻璃反射、缸外雜點）──
+// 俯視座標：b＝前後（iPhone 視線去掉上下分量，往缸內為正）、a＝左右（UP × b），高度不限。
+// 範圍取自 ted_coral.sog 的俯視密度圖：前玻璃 b≈-1.5、底沙左右約 -5.2～6.1、後方背板 b≈3.5，各留一點邊。
+// 作法同主頁 hover：SDF box 加 invert＋opacity 0，box 外的 splat 不透明度乘 0。
+const TANK_AB = { a: [-5.2, 6.1], b: [-1.6, 3.95] };
+{
+  const eb = new THREE.Vector3(...M.cam.forward).projectOnPlane(UP).normalize();
+  const ea = new THREE.Vector3().crossVectors(UP, eb).normalize();
+  const ca = (TANK_AB.a[0] + TANK_AB.a[1]) / 2, cb = (TANK_AB.b[0] + TANK_AB.b[1]) / 2;
+  const sdf = new SplatEditSdf({ type: SplatEditSdfType.BOX, invert: true, opacity: 0 });
+  sdf.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(ea, UP, eb)); // 本地 x＝左右、y＝上、z＝前後
+  sdf.position.copy(ea).multiplyScalar(ca).addScaledVector(eb, cb);
+  sdf.scale.set((TANK_AB.a[1] - TANK_AB.a[0]) / 2, 1000, (TANK_AB.b[1] - TANK_AB.b[0]) / 2);
+  const edit = new SplatEdit({ sdfs: [sdf], rgbaBlendMode: SplatEditRgbaBlendMode.MULTIPLY });
+  splat.add(edit); splat.add(sdf); // 掛在 splat 底下（splat 沒有位移，本地座標＝世界座標）
+  splat.updateMatrixWorld(true);   // 與主頁相同：設定完 transform 先更新矩陣
+  splat.edits = [edit];
+  // 不裁切時讓 box 外乘 1（等於不變）
+  $('optCrop').onchange = (e) => { sdf.opacity = e.target.checked ? 0 : 1; };
+}
+
+const root = $('viewer-root');
+function resize() {
+  const w = root.clientWidth, h = root.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(root);
+resize();
+
+// ── 視角 ──
+let following = null; // 雙擊魚名後跟隨的魚
+const target = new THREE.Vector3(...M.target);
+const iphonePos = new THREE.Vector3(...M.cam.position);
+function setView(kind) {
+  setFollowing(null);
+  for (const [id, k] of [['viewIphone', 'iphone'], ['viewTop', 'top'], ['viewSide', 'side']]) $(id).classList.toggle('active', k === kind);
+  controls.target.copy(target);
+  const d = iphonePos.distanceTo(target);
+  if (kind === 'iphone') {
+    camera.position.copy(iphonePos);
+  } else if (kind === 'top') {
+    // 由上往下，稍微偏向 iPhone 那側，畫面上方＝缸的後方
+    const back = new THREE.Vector3().subVectors(target, iphonePos).projectOnPlane(UP).normalize();
+    camera.position.copy(target).addScaledVector(UP, d * 1.1).addScaledVector(back, -d * 0.05);
+  } else {
+    const fwd = new THREE.Vector3().subVectors(target, iphonePos).projectOnPlane(UP).normalize();
+    const right = new THREE.Vector3().crossVectors(fwd, UP).normalize();
+    camera.position.copy(target).addScaledVector(right, d).addScaledVector(UP, d * 0.15);
+  }
+  controls.update();
+}
+function setFollowing(f) {
+  following = f;
+  for (const el of document.querySelectorAll('.fish')) el.classList.toggle('following', el === f?.el);
+}
+$('viewIphone').onclick = () => setView('iphone');
+$('viewTop').onclick = () => setView('top');
+$('viewSide').onclick = () => setView('side');
+setView('iphone');
+
+// ── 程式產生的低多邊形魚：本地 +Z 為魚頭方向 ──
+function makeFish(f) {
+  const L = f.body_len;
+  const g = new THREE.Group();
+  const bodyMat = new THREE.MeshStandardMaterial({ color: f.color, roughness: 0.55, flatShading: true });
+  const accMat = new THREE.MeshStandardMaterial({ color: f.accent, roughness: 0.55, flatShading: true, side: THREE.DoubleSide });
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.5, 10, 8), bodyMat);
+  body.scale.set(0.16 * L, 0.42 * L, 0.72 * L); // 側扁（倒吊類體高、體薄）
+  g.add(body);
+  const tail = new THREE.Group();
+  tail.position.z = -0.34 * L;
+  const tg = new THREE.BufferGeometry();
+  tg.setAttribute('position', new THREE.Float32BufferAttribute(
+    [0, 0, 0, 0, 0.2 * L, -0.26 * L, 0, -0.2 * L, -0.26 * L], 3));
+  tg.computeVertexNormals();
+  tail.add(new THREE.Mesh(tg, accMat));
+  g.add(tail);
+  const dorsal = new THREE.BufferGeometry();
+  dorsal.setAttribute('position', new THREE.Float32BufferAttribute(
+    [0, 0.19 * L, 0.12 * L, 0, 0.19 * L, -0.22 * L, 0, 0.3 * L, -0.12 * L], 3));
+  dorsal.computeVertexNormals();
+  g.add(new THREE.Mesh(dorsal, accMat));
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
+  for (const s of [-1, 1]) {
+    const e = new THREE.Mesh(new THREE.SphereGeometry(0.035 * L, 6, 5), eyeMat);
+    e.position.set(s * 0.075 * L, 0.06 * L, 0.24 * L);
+    g.add(e);
+  }
+  g.userData.tail = tail;
+  g.userData.animate = (dt, rate, phase) => { tail.rotation.y = Math.sin(phase) * 0.45; };
+  g.up.copy(UP);
+  return g;
+}
+
+// ── 外部魚模型（models\README.md：Quaternius CC0、Sloyd CC BY 4.0）──
+// file：模型；rotY：轉到「魚頭朝 +Z、背朝 +Y」；colors：材質名 → 顏色（依這缸的物種外觀改色）
+// fbx：改用專案主頁自有的 FBX 魚（/twin/assets/fish/），只在整合 server 下可用；三個 FBX 本身都是魚頭朝 +Z，不需 rotY
+// darken：把貼圖上的橘色區塊壓成黑色（主頁小丑魚是橘白公子，這缸是黑白型）
+const OUR_FISH = '../twin/assets/fish/';
+const FISH_MODELS = {
+  fish_1: { fbx: 'clownfish/source/clown_fish_ain.fbx', darken: 'clownfish_ver2_smooth_Albedo.png' },
+  fish_2: { fbx: 'yellow-tang/source/Fish 3_2.fbx' },
+  fish_3: { file: 'quaternius_fish_XWl86YFtpF.glb', colors: { Top: '#d8483a', Bottom: '#f4e6e0', Fins: '#e2685a' } },
+  fish_4: { fbx: 'clownfish/source/clown_fish_ain.fbx', darken: 'clownfish_ver2_smooth_Albedo.png' },
+  // 模型本身魚頭朝 +Z；主頁的 yRot -π 會讓它倒著游。
+  // dropTracks：Blue_Tang_cv（整副骨架的父節點）的旋轉軌道會讓整條魚以 1 秒週期甩動約 75°，擺尾在 joint 骨骼上，拿掉不影響游動
+  fish_5: { fbx: 'blue-tang/source/Blue_Tang_ain.fbx', dropTracks: /^Blue_Tang_cv\./ },
+  fish_6: { file: 'quaternius_fish_Ymu8ftrmuT.glb', colors: { Body: '#3a1858', Front: '#4a2270', Fins: '#ffd000' } },
+  fish_7: { file: 'quaternius_clownfish.glb', colors: { Clownfish_Main: '#ffa31a', Clownfish_Light: '#ffc24d', Clownfish_Dark: '#d98200' } },
+  fish_8: { file: 'quaternius_fish_XWl86YFtpF.glb', colors: { Top: '#a85a4e', Bottom: '#f3dcd6', Fins: '#d6a096' } },
+};
+const gltfCache = {};
+const loader = new GLTFLoader();
+function loadGltf(file) {
+  return gltfCache[file] ??= new Promise((res, rej) => loader.load('models/' + file, res, undefined, rej));
+}
+
+// FBX 引用的貼圖檔名一律改到同層 textures/ 資料夾（與主頁 loadFBXWithTex 相同規則）
+function loadFbx(file) {
+  return gltfCache[file] ??= new Promise((res, rej) => {
+    const url = OUR_FISH + file;
+    const texBase = url.replace(/source\/[^/]+$/, 'textures/');
+    const manager = new THREE.LoadingManager();
+    manager.setURLModifier((u) => /\.(png|jpe?g|tga)$/i.test(u) ? texBase + u.split(/[/\\]/).pop() : u);
+    new FBXLoader(manager).load(url, (obj) => res({ scene: obj, animations: obj.animations, texBase }), undefined, rej);
+  });
+}
+
+// 橘色像素（紅明顯大於藍、且飽和）改成同明暗的近黑色，白色條紋與黑邊保留
+const darkTexCache = {};
+function darkenedTexture(src) {
+  return darkTexCache[src] ??= new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => {
+      const cv = document.createElement('canvas');
+      cv.width = img.width; cv.height = img.height;
+      const ctx = cv.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      const im = ctx.getImageData(0, 0, cv.width, cv.height), d = im.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const r = d[i], g = d[i + 1], b = d[i + 2];
+        if (r > 120 && r - b > 70 && r > g) {
+          const v = 18 + (r + g + b) / 3 * 0.12;
+          d[i] = d[i + 1] = d[i + 2] = v;
+        }
+      }
+      ctx.putImageData(im, 0, 0);
+      const tex = new THREE.CanvasTexture(cv);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      res(tex);
+    };
+    img.onerror = rej;
+    img.src = src;
+  });
+}
+
+// 靜態模型的擺尾：頂點著色器中，魚身後半沿左右方向做正弦彎曲（越靠尾巴幅度越大）
+function addBend(mat, halfLen) {
+  const u = { uPhase: { value: 0 }, uAmp: { value: 0.12 * halfLen }, uHalf: { value: halfLen } };
+  mat.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, u);
+    sh.vertexShader = 'uniform float uPhase, uAmp, uHalf;\n' + sh.vertexShader.replace('#include <begin_vertex>',
+      `#include <begin_vertex>
+       float tailW = smoothstep(0.1 * uHalf, -uHalf, transformed.x);
+       transformed.z += uAmp * tailW * sin(uPhase + transformed.x / uHalf * 2.5);`);
+  };
+  return u;
+}
+
+// 把外部模型換進魚的 Group；失敗則保留程式產生的魚
+async function attachModel(f) {
+  const cfg = FISH_MODELS[f.id];
+  if (!cfg) return;
+  try {
+    const gltf = cfg.fbx ? await loadFbx(cfg.fbx) : await loadGltf(cfg.file);
+    const darkTex = cfg.darken ? await darkenedTexture(gltf.texBase + cfg.darken) : null;
+    const obj = SkeletonUtils.clone(gltf.scene);
+    let bendU = null;
+    obj.traverse((o) => {
+      if (o.isLine || o.isLineSegments || o.isPoints) o.visible = false; // FBX 內的骨架輔助線
+      if (!o.isMesh) return;
+      o.frustumCulled = false; // 骨架動畫的包圍盒不準，避免被誤裁
+      o.material = Array.isArray(o.material) ? o.material.map((m) => m.clone()) : o.material.clone();
+      for (const m of [].concat(o.material)) {
+        const c = cfg.colors?.[m.name];
+        if (c) m.color.set(c);
+        if (cfg.fbx) m.side = THREE.DoubleSide;
+        if (darkTex && m.map) { m.map = darkTex; m.needsUpdate = true; }
+      }
+    });
+    const inner = new THREE.Group();
+    inner.add(obj);
+    inner.rotation.y = cfg.rotY || 0;
+    inner.updateMatrixWorld(true); // 模型節點含 100 倍縮放與旋轉，需先更新矩陣再量包圍盒
+    // 依實際包圍盒縮放：魚長（+Z 方向）＝ body_len，並置中
+    const box = new THREE.Box3().setFromObject(inner);
+    const size = box.getSize(new THREE.Vector3());
+    const s = f.body_len / size.z;
+    inner.scale.setScalar(s);
+    inner.position.copy(box.getCenter(new THREE.Vector3())).multiplyScalar(-s);
+    if (cfg.bend) {
+      obj.updateMatrixWorld(true);
+      const lb = new THREE.Box3().setFromObject(obj);
+      obj.traverse((o) => { if (o.isMesh) bendU = addBend(o.material, (lb.max.x - lb.min.x) / 2); });
+    }
+    let mixer = null, action = null;
+    let clip = cfg.fbx ? gltf.animations[0] : gltf.animations.find((a) => /Swimming_Normal|Swim/.test(a.name));
+    if (clip && cfg.dropTracks) clip = new THREE.AnimationClip(clip.name, clip.duration, clip.tracks.filter((t) => !cfg.dropTracks.test(t.name)));
+    if (clip) {
+      mixer = new THREE.AnimationMixer(obj);
+      action = mixer.clipAction(clip);
+      action.time = Math.random() * clip.duration;
+      action.play();
+    }
+    console.debug('model', f.id, cfg.file, 'size', size.toArray().map((v) => v.toFixed(3)).join(','), 'scale', s.toFixed(3));
+    for (const c of [...f.mesh.children]) f.mesh.remove(c); // 拿掉程式產生的魚
+    f.mesh.add(inner);
+    f.mesh.userData.animate = (dt, rate, phase) => {
+      if (mixer) { action.timeScale = rate; mixer.update(dt); }
+      if (bendU) bendU.uPhase.value = phase;
+    };
+  } catch (e) {
+    console.warn('魚模型載入失敗，改用程式產生的魚：', f.id, e);
+  }
+}
+
+// ── 魚與軌跡 ──
+const TRAIL_S = 3;
+const fishes = data.fish.map((f) => {
+  const mesh = makeFish(f);
+  mesh.visible = false;
+  scene.add(mesh);
+  const n = Math.round(TRAIL_S * M.fps);
+  const tgeo = new THREE.BufferGeometry();
+  tgeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 3), 3));
+  const trail = new THREE.Line(tgeo, new THREE.LineBasicMaterial({ color: f.color === '#1e1e1e' ? '#9aa4ae' : f.color,
+    transparent: true, opacity: 0.8 }));
+  trail.frustumCulled = false;
+  scene.add(trail);
+  return { ...f, mesh, trail, on: true, phase: Math.random() * 6.28, dir: new THREE.Vector3(0, 0, 1) };
+});
+fishes.forEach(attachModel);
+
+// 在時間 t 取得某條魚的位置（片段內線性內插）；不在任何片段 → null。lastSeg 記錄命中的片段編號
+// 複雜度：O(S)（S＝片段數，每條魚 ≤ 11）
+const _p = new THREE.Vector3();
+let lastSeg = -1;
+function posAt(f, t, out = _p) {
+  for (let si = 0; si < f.segments.length; si++) {
+    const s = f.segments[si];
+    const n = s.p.length / 3;
+    const u = (t - s.t0) * M.fps;
+    if (u < 0 || u > n - 1) continue;
+    const i = Math.min(Math.floor(u), n - 2), a = u - i;
+    const p = s.p;
+    lastSeg = si;
+    return out.set(
+      p[3 * i] * (1 - a) + p[3 * i + 3] * a,
+      p[3 * i + 1] * (1 - a) + p[3 * i + 4] * a,
+      p[3 * i + 2] * (1 - a) + p[3 * i + 5] * a);
+  }
+  return null;
+}
+
+// ── 魚清單 ──
+const list = $('fishList');
+for (const f of fishes) {
+  const el = document.createElement('div');
+  el.className = 'fish';
+  el.innerHTML = `<span class="sw" style="background:${f.color}"></span>
+    <span>${f.id.replace('fish_', '#')} ${f.species.replace(/[?？]/g, '')}</span><span class="st">—</span>`;
+  el.onclick = () => { f.on = !f.on; el.classList.toggle('off', !f.on); };
+  el.ondblclick = (e) => { e.preventDefault(); f.on = true; el.classList.remove('off'); setFollowing(f); };
+  f.el = el;
+  f.stEl = el.querySelector('.st');
+  list.appendChild(el);
+}
+
+// ── 時間：固定 1× 循環播放，無進度條 ──
+// 顯示現場畫面時以影片為主時鐘（3D 跟著影片走），不顯示時用自身時鐘。
+// 舊作法是每幀比對、偏差 > 0.25 秒就 seek 影片：慢的機器一掉幀就 seek，seek 又造成更多掉幀，
+// 連鎖下去影片一直在 seek、整頁卡住。
+let t = 0;
+const speed = 1;
+const video = $('ref');
+$('optPip').onchange = (e) => {
+  $('pip').style.display = e.target.checked ? '' : 'none';
+  if (e.target.checked) { video.currentTime = t; video.play().catch(() => {}); }
+  else video.pause(); // 隱藏時不必繼續解碼
+};
+$('optSplat').onchange = (e) => { splat.visible = e.target.checked; };
+// 選項下拉：平常收著，點按鈕展開，點選單外收起
+$('opt-dd-btn').onclick = (e) => { e.stopPropagation(); $('opt-dd-menu').classList.toggle('hidden'); };
+document.addEventListener('click', (e) => { if (!$('opt-dd').contains(e.target)) $('opt-dd-menu').classList.add('hidden'); });
+
+const prev = new THREE.Vector3(), next = new THREE.Vector3(), cur = new THREE.Vector3();
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(clock.getDelta(), 0.1);
+  const pipOn = $('optPip').checked;
+  if (pipOn && video.paused) video.play().catch(() => {});
+  if (pipOn && !video.paused && !video.seeking && video.readyState >= 2) t = video.currentTime;
+  else t += dt * speed;
+  if (t >= M.duration) { t = 0; video.currentTime = 0; }
+
+  const showTrail = $('optTrail').checked;
+  for (const f of fishes) {
+    const p = posAt(f, t, cur);
+    const segNow = lastSeg;
+    const vis = f.on && p !== null;
+    f.mesh.visible = vis;
+    f.stEl.textContent = p ? '在畫面' : '畫面外';
+    f.stEl.classList.toggle('in', !!p);
+    if (vis) {
+      f.mesh.position.copy(p);
+      // 魚頭朝向：前後 0.3 秒的位移方向，平滑轉向
+      const a = posAt(f, Math.max(t - 0.3, 0), prev), b = posAt(f, t + 0.3, next);
+      if (a && b) {
+        const d = b.clone().sub(a);
+        const speedNow = d.length() / 0.6;
+        f.rate = 0.6 + 0.9 * Math.min(speedNow / f.body_len, 3); // 游得越快、擺尾越快
+        if (d.lengthSq() > 1e-6) {
+          d.normalize();
+          const v = d.dot(UP), h = d.clone().addScaledVector(UP, -v);
+          const maxV = Math.sin(Math.PI / 6);
+          if (h.lengthSq() > 1e-6 && Math.abs(v) > maxV) d.copy(h.normalize().multiplyScalar(Math.cos(Math.PI / 6))).addScaledVector(UP, Math.sign(v) * maxV);
+          f.dir.lerp(d, 0.15).normalize();
+        }
+        f.phase += dt * (6 + 10 * Math.min(speedNow / f.body_len, 3));
+      } else {
+        f.phase += dt * 6;
+      }
+      f.mesh.lookAt(cur.clone().add(f.dir));
+      f.mesh.userData.animate(dt * speed, f.rate || 1, f.phase);
+    }
+    // 軌跡尾巴：過去 3 秒
+    const arr = f.trail.geometry.attributes.position.array;
+    const n = arr.length / 3;
+    let k = 0;
+    if (vis && showTrail) {
+      for (let i = n - 1; i >= 0; i--) {
+        const q = posAt(f, t - i / M.fps, prev);
+        if (!q || lastSeg !== segNow) continue; // 只畫目前片段，不連到前一段
+        arr[3 * k] = q.x; arr[3 * k + 1] = q.y; arr[3 * k + 2] = q.z; k++;
+      }
+    }
+    f.trail.geometry.setDrawRange(0, k);
+    f.trail.geometry.attributes.position.needsUpdate = true;
+    f.trail.visible = k > 1;
+  }
+  if (following && following.mesh.visible) {
+    const delta = following.mesh.position.clone().sub(controls.target);
+    controls.target.add(delta);
+    camera.position.add(delta);
+  }
+  controls.update();
+  renderer.render(scene, camera);
+});
+</script>
+</body>
+</html>

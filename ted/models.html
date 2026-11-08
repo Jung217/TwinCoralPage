@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>魚模型預覽</title>
+<style>
+  :root { --bg: #0b1016; --text: #e6edf3; --muted: #8b98a5; --line: #2a3542; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 14px/1.5 system-ui, "Microsoft JhengHei", sans-serif; }
+  #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; padding: 16px; }
+  .card { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #111922; }
+  .card canvas { width: 100%; height: 200px; display: block; }
+  .card .t { padding: 8px 10px; }
+  .card .m { color: var(--muted); font-size: 12px; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="grid"></div>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+// 每個模型各自一個小場景：自動置中縮放、播放游泳動畫、緩慢旋轉
+const MODELS = [
+  ['quaternius_clownfish.glb', 'Quaternius 小丑魚', 'CC0・骨架動畫'],
+  ['quaternius_butterflyfish.glb', 'Quaternius 蝴蝶魚', 'CC0・骨架動畫'],
+  ['quaternius_lionfish.glb', 'Quaternius 獅子魚', 'CC0・骨架動畫'],
+  ['quaternius_fish_BEcU9rjiAq.glb', 'Quaternius 通用魚 A', 'CC0・骨架動畫'],
+  ['quaternius_fish_XWl86YFtpF.glb', 'Quaternius 通用魚 B', 'CC0・骨架動畫'],
+  ['quaternius_fish_Ymu8ftrmuT.glb', 'Quaternius 通用魚 C', 'CC0・骨架動畫'],
+  ['sloyd_blue_tang.glb', 'Sloyd 藍倒吊', 'CC BY 4.0・靜態貼圖'],
+];
+const AXES = location.hash === '#axes'; // 檢查模式：不旋轉、從 +X 側看、顯示座標軸（紅 X、綠 Y、藍 Z）
+const loader = new GLTFLoader();
+const views = [];
+for (const [file, name, meta] of MODELS) {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = `<canvas></canvas><div class="t">${name}<div class="m">${meta}・${file}</div></div>`;
+  document.getElementById('grid').appendChild(card);
+  const canvas = card.querySelector('canvas');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x1a2633);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x445566, 2));
+  const dl = new THREE.DirectionalLight(0xffffff, 1.5);
+  dl.position.set(2, 3, 4);
+  scene.add(dl);
+  const camera = new THREE.PerspectiveCamera(35, 1.4, 0.01, 100);
+  const pivot = new THREE.Group();
+  scene.add(pivot);
+  const v = { renderer, scene, camera, pivot, canvas, mixer: null };
+  views.push(v);
+  loader.load('models/' + file, (g) => {
+    const obj = g.scene;
+    const box = new THREE.Box3().setFromObject(obj);
+    const size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
+    const s = 1 / Math.max(size.x, size.y, size.z);
+    obj.scale.setScalar(s);
+    obj.position.copy(c).multiplyScalar(-s);
+    pivot.add(obj);
+    camera.position.set(0, 0.25, 1.9);
+    if (AXES) { camera.position.set(1.9, 0.3, 0); scene.add(new THREE.AxesHelper(0.8)); }
+    camera.lookAt(0, 0, 0);
+    if (g.animations.length) {
+      v.mixer = new THREE.AnimationMixer(obj);
+      const clip = g.animations.find((a) => /Swimming_Normal|Swim/.test(a.name)) || g.animations[0];
+      v.mixer.clipAction(clip).play();
+    }
+  }, undefined, (e) => { card.querySelector('.m').textContent = '載入失敗：' + e.message; });
+}
+const clock = new THREE.Clock();
+function loop() {
+  const dt = clock.getDelta();
+  for (const v of views) {
+    const w = v.canvas.clientWidth, h = v.canvas.clientHeight;
+    if (v.canvas.width !== w || v.canvas.height !== h) { v.renderer.setSize(w, h, false); v.camera.aspect = w / h; v.camera.updateProjectionMatrix(); }
+    if (!AXES) v.pivot.rotation.y += dt * 0.5;
+    if (v.mixer) v.mixer.update(dt);
+    v.renderer.render(v.scene, v.camera);
+  }
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
