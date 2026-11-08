@@ -14,7 +14,6 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/oh-my-live2d@0.19.3/dist/index.min.js"></script>
 <script type="importmap">
 {
   "imports": {
@@ -54,53 +53,6 @@
     color: #94a3b8; background:#f8fafc; border:1px solid #e2e8f0;
     padding: 2px 6px; border-radius: 4px;
   }
-  /* ── Character system ── */
-  #character-container {
-    position: absolute; bottom: 12px; right: 12px; z-index: 15;
-    width: 180px; pointer-events: auto;
-    transition: opacity .4s ease;
-  }
-  #character-container.hidden { opacity: 0; pointer-events: none; }
-  .char-img-wrap {
-    position: relative; width: 180px; height: 260px; overflow: hidden;
-    border-radius: 12px;
-    animation: charFloat 4s ease-in-out infinite;
-  }
-  .char-img-wrap img {
-    width: 100%; height: 100%; object-fit: cover; object-position: top center;
-    filter: drop-shadow(0 2px 12px rgba(0,0,0,.35));
-    animation: charBreathe 3.5s ease-in-out infinite;
-    transition: opacity .35s ease;
-  }
-  @keyframes charFloat {
-    0%,100% { transform: translateY(0); }
-    50%     { transform: translateY(-6px); }
-  }
-  @keyframes charBreathe {
-    0%,100% { transform: scale(1); }
-    50%     { transform: scale(1.012); }
-  }
-  .char-dialogue {
-    margin-top: 6px; padding: 8px 10px;
-    background: rgba(15,23,42,.88); backdrop-filter: blur(6px);
-    border: 1px solid rgba(251,146,60,.25); border-radius: 10px;
-    font-size: 12px; line-height: 1.5; color: #e2e8f0;
-    min-height: 42px; max-height: 110px; overflow-y: auto;
-    box-shadow: 0 2px 10px rgba(0,0,0,.2);
-  }
-  .char-dialogue .char-name {
-    font-size: 10px; font-weight: 600; color: #fb923c;
-    margin-bottom: 2px; letter-spacing: .03em;
-  }
-  .char-dialogue .char-text { min-height: 1.5em; }
-  .char-toggle {
-    position: absolute; top: -8px; right: -8px; z-index: 16;
-    width: 22px; height: 22px; border-radius: 50%;
-    background: rgba(15,23,42,.85); border: 1px solid #334155;
-    color: #94a3b8; font-size: 12px; line-height: 20px; text-align: center;
-    cursor: pointer; transition: color .15s;
-  }
-  .char-toggle:hover { color: #f1f5f9; }
   .pulse-dot { animation: pulse 2s ease-in-out infinite; }
   @keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
   .seg-btn { transition: all .15s ease; }
@@ -166,10 +118,6 @@
   .comp-chip.active { border-color:#f97316; background:rgba(249,115,22,.08); color:#1e293b; }
   .comp-chip .dot, .dot-genus { width:9px; height:9px; border-radius:50%; display:inline-block; border:1px solid rgba(0,0,0,.15); }
   .dot-genus { vertical-align:middle; margin-right:5px; }
-  /* 導覽員「顯示」鈕：以 class 控制顯示，避免 inline style 蓋過 .hidden */
-  .char-show-btn { width:36px; height:36px; border-radius:50%; background:rgba(15,23,42,.8); backdrop-filter:blur(4px);
-    border:1px solid rgba(251,146,60,.35); color:#fb923c; font-size:18px; cursor:pointer; display:grid; place-items:center; margin-left:auto; }
-  .char-show-btn.hidden { display:none !important; }
   /* ── 行動裝置／窄螢幕：改為可捲動的直向版面，三維檢視區保留高度 ── */
   @media (max-width: 1023px) {
     html, body { height: auto; overflow: auto; }
@@ -271,12 +219,6 @@
               <input id="fish-toggle-emperor" type="checkbox" checked class="accent-coral-500 w-3 h-3" data-fish="emperor"/>
               <span>皇帝神仙</span>
             </label>
-            <div class="border-t border-ink-800 my-1"></div>
-            <div class="px-3 py-1 text-[10px] text-fog-500 font-semibold uppercase tracking-wide">角色</div>
-            <label class="flex items-center gap-2 px-3 py-1.5 text-[11px] text-fog-400 hover:bg-ink-800/60 cursor-pointer">
-              <input id="char-toggle" type="checkbox" class="accent-coral-500 w-3 h-3"/>
-              <span>珊瑚娘</span>
-            </label>
           </div>
         </div>
       </div>
@@ -320,22 +262,6 @@
             </table>
           </div>
         </details>
-      </div>
-      <!-- Character guide overlay -->
-      <div class="viewer-overlay absolute bottom-3 right-3 z-15">
-        <div id="character-container">
-          <button class="char-toggle" id="char-close" title="隱藏導覽員">×</button>
-          <div class="char-img-wrap">
-            <img id="char-img" src="./assets/characters/coral-chan.png" alt="珊瑚娘" />
-          </div>
-          <div class="char-dialogue">
-            <div class="char-name" id="char-name">珊瑚娘 Coral-chan</div>
-            <div class="char-text" id="char-text"></div>
-          </div>
-        </div>
-        <button id="char-show" class="char-show-btn hidden" title="顯示導覽員">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        </button>
       </div>
 
       <!-- Loading overlay -->
@@ -667,238 +593,6 @@ function tick() {
   setReading('p',   clamp(c.p   + jitter(0.005), 0.02, 0.3));
 }
 
-
-// =========================================
-//  Character guide system
-// =========================================
-const CHAR_DATA = {
-  name: '珊瑚娘 Coral-chan',
-  img: './assets/characters/coral-chan.png',
-  greeting: '歡迎來到珊瑚礁數位孿生平台！點擊 3D 模型上的珊瑚群落，我會為你介紹～',
-  info: [
-    '這個平台用高斯潑濺技術重建了真實珊瑚礁的 3D 模型喔！',
-    '目前場景中有 38 個珊瑚群落，來自實地調查資料。',
-    '試試旋轉視角，或是點擊任何一個珊瑚群落來了解更多！',
-  ],
-  alert_hot: '水溫偏高了…超過 29°C 珊瑚可能會白化，好擔心…',
-  healthy: '水質看起來很穩定，珊瑚們都很健康的樣子！',
-};
-
-const GENUS_LINES = {
-  Acropora: [
-    '你找到軸孔珊瑚了！牠們是珊瑚礁的建築師～',
-    '軸孔珊瑚是造礁珊瑚中種類最多的屬，全世界有超過 150 種！',
-    '牠的分枝結構可以為很多小魚小蝦提供庇護所喔。',
-    '不過軸孔珊瑚對水質變化很敏感…水溫一高就容易白化 QQ',
-    '在這個礁區，軸孔珊瑚有 14 個群落，是數量最多的！',
-  ],
-  Pocillopora: [
-    '這是鹿角珊瑚！比軸孔珊瑚耐操一點～',
-    '鹿角珊瑚的表面有很多小突起，像鹿角上的疣狀物。',
-    '牠算是 SPS 裡比較強健的，新手養海水缸常從牠開始！',
-    '鹿角珊瑚跟蟲黃藻是好朋友，蟲黃藻住在牠體內幫忙行光合作用。',
-  ],
-  Pavona: [
-    '你點到雀屏珊瑚了～像孔雀開屏一樣展開！',
-    '雀屏珊瑚的外型像薄薄的葉片或扇子。',
-    '牠既有 SPS 的骨骼，又有接近 LPS 的耐受度，算是跨界選手！',
-    '在光線不太強的地方也能生長，很隨和的～',
-  ],
-  Favites: [
-    '這是菊珊瑚，腦珊瑚家族的成員！',
-    '菊珊瑚的表面有很多六角形的杯狀結構，像蜂巢一樣。',
-    '牠是 LPS 珊瑚，比 SPS 好養，對水質變化的耐受度更高。',
-    '晚上牠會伸出觸手捕食浮游生物，白天就收起來曬太陽。',
-  ],
-  Euphyllia: [
-    '你找到真葉珊瑚了！花瓶珊瑚和火炬珊瑚都是牠的親戚！',
-    '真葉珊瑚有長長的觸手，在水流中飄動很好看！',
-    '牠是 LPS 裡最受歡迎的觀賞珊瑚之一，顏色有很多變化。',
-    '小心不要把其他珊瑚放太近，牠的觸手可以伸到 15 公分遠喔！',
-    '在這個礁區真葉珊瑚有 10 個群落，是第二多的！',
-  ],
-  Stylophora: [
-    '這是柱珊瑚，入門級 SPS 就是牠！',
-    '柱珊瑚的外型是粗短的分枝，比軸孔珊瑚更結實。',
-    '很多人養海水缸第一顆 SPS 就選牠，因為比較好養。',
-    '牠在這個礁區有 4 個群落，分佈還算均勻。',
-  ],
-  Montipora: [
-    '你點到表孔珊瑚了～有皮殼型也有板片型喔！',
-    '表孔珊瑚的形態非常多樣，可以是片狀、枝狀或覆蓋狀。',
-    '牠是 SPS 裡第二大的屬，僅次於軸孔珊瑚。',
-    '牠的表面有很多微小的孔洞，這就是「表孔」名字的由來。',
-  ],
-  Fungia: [
-    '這是蕈珊瑚，大家都叫牠飛碟珊瑚～',
-    '蕈珊瑚跟其他珊瑚不一樣，牠是單體自由生活的，不固定在石頭上！',
-    '牠長得像香菇或飛碟，是最好養的珊瑚之一。',
-    '成年後牠會從基座脫落，可以在海底慢慢移動喔～',
-  ],
-};
-
-let charTypingTimer = null;
-let charVisible = localStorage.getItem('charVisible') === 'true'; // 預設關閉，使用者開過才記住
-let charCurrentGenus = null;
-let oml2dInstance = null;
-let live2dActive = false;
-
-function typeText(el, text, speed = 35) {
-  if (charTypingTimer) { clearInterval(charTypingTimer); charTypingTimer = null; }
-  el.textContent = '';
-  let i = 0;
-  charTypingTimer = setInterval(() => {
-    if (i < text.length) { el.textContent += text[i]; i++; }
-    else { clearInterval(charTypingTimer); charTypingTimer = null; }
-  }, speed);
-}
-
-function pickCharText(genus) {
-  if (genus === 'coral-chan') {
-    const pool = [CHAR_DATA.greeting, ...CHAR_DATA.info];
-    return pool[Math.floor(Math.random() * pool.length)];
-  }
-  const lines = GENUS_LINES[genus];
-  if (lines && lines.length) return lines[Math.floor(Math.random() * lines.length)];
-  const zh = CLASS_ZH[genus];
-  return zh ? `你點到了${zh}（${genus}）的群落！` : CHAR_DATA.greeting;
-}
-
-function syncCharToggle(visible) {
-  const cb = document.getElementById('char-toggle');
-  if (cb) cb.checked = visible;
-}
-
-function showCharacter(genus) {
-  charCurrentGenus = genus;
-  const text = pickCharText(genus);
-
-  if (live2dActive && oml2dInstance) {
-    const canvas = document.getElementById('oml2d-canvas');
-    if (canvas) canvas.parentElement.style.display = '';
-    oml2dInstance.tipsMessage(text, 10000, 10);
-    const sb = document.getElementById('char-show');
-    if (sb) sb.classList.add('hidden');
-    syncCharToggle(true);
-    return;
-  }
-
-  const container = document.getElementById('character-container');
-  const nameEl = document.getElementById('char-name');
-  const textEl = document.getElementById('char-text');
-  if (!container) return;
-  nameEl.textContent = CHAR_DATA.name;
-  typeText(textEl, text);
-  container.classList.remove('hidden');
-  const showBtn = document.getElementById('char-show');
-  if (showBtn) showBtn.classList.add('hidden');
-  syncCharToggle(true);
-}
-
-function hideCharacter() {
-  if (live2dActive) {
-    const canvas = document.getElementById('oml2d-canvas');
-    if (canvas) canvas.parentElement.style.display = 'none';
-  }
-  const container = document.getElementById('character-container');
-  const showBtn = document.getElementById('char-show');
-  if (container) container.classList.add('hidden');
-  if (showBtn) showBtn.classList.remove('hidden');
-  syncCharToggle(false);
-}
-
-function initCharacterSystem() {
-  const closeBtn = document.getElementById('char-close');
-  const showBtn = document.getElementById('char-show');
-  const charToggleCb = document.getElementById('char-toggle');
-  if (closeBtn) {
-    closeBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      charVisible = false;
-      localStorage.setItem('charVisible', 'false');
-      hideCharacter();
-    });
-  }
-  if (showBtn) {
-    showBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      charVisible = true;
-      localStorage.setItem('charVisible', 'true');
-      showBtn.classList.add('hidden');
-      showCharacter(charCurrentGenus || 'coral-chan');
-    });
-  }
-  if (charToggleCb) {
-    charToggleCb.checked = charVisible;
-    charToggleCb.addEventListener('change', () => {
-      charVisible = charToggleCb.checked;
-      localStorage.setItem('charVisible', String(charVisible));
-      if (charVisible) showCharacter(charCurrentGenus || 'coral-chan');
-      else hideCharacter();
-    });
-  }
-  if (charVisible) showCharacter('coral-chan');
-  else hideCharacter();
-}
-
-function initLive2D() {
-  const lib = (typeof OML2D !== 'undefined') ? OML2D : window.OML2D;
-  if (!lib || !lib.loadOml2d) return;
-  try {
-    oml2dInstance = lib.loadOml2d({
-      dockedPosition: 'right',
-      menus: { disable: true },
-      statusBar: { disable: true },
-      tips: {
-        idleTips: { message: CHAR_DATA.info, interval: 25000 },
-        welcomeTips: {
-          message: {
-            daybreak: CHAR_DATA.greeting, morning: CHAR_DATA.greeting,
-            noon: CHAR_DATA.greeting, afternoon: CHAR_DATA.greeting,
-            dusk: CHAR_DATA.greeting, night: CHAR_DATA.greeting,
-            lateNight: CHAR_DATA.greeting, weeHours: CHAR_DATA.greeting,
-          },
-          duration: 8000, priority: 3,
-        },
-        copyTips: { message: [] },
-        style: {
-          fontSize: '11px',
-          fontFamily: "'Inter', system-ui, sans-serif",
-          minWidth: '160px',
-          maxWidth: '200px',
-          borderRadius: '8px',
-          padding: '6px 10px',
-          background: 'rgba(255,255,255,.92)',
-          backdropFilter: 'blur(8px)',
-          border: '1px solid rgba(251,146,60,.3)',
-          color: '#ffffff',
-          boxShadow: '0 2px 8px rgba(0,0,0,.08)',
-        },
-      },
-      models: [
-        {
-          path: 'https://cdn.jsdelivr.net/gh/guansss/pixi-live2d-display/test/assets/shizuku/shizuku.model.json',
-          position: [0, 60],
-          scale: 0.25,
-          stageStyle: { height: 360, width: 240 },
-        },
-      ],
-    });
-    live2dActive = true;
-    // Live2D 啟用時靜態立繪容器永久隱藏；「顯示導覽員」鈕改由 .hidden class 控制，
-    // 隱藏導覽員後仍可按它把 Live2D 舞台叫回來（舊版在此把它 display:none 蓋死，造成無法恢復）。
-    const cc = document.getElementById('character-container');
-    if (cc) cc.style.display = 'none';
-    if (!charVisible) {
-      setTimeout(() => {
-        const canvas = document.getElementById('oml2d-canvas');
-        if (canvas) canvas.parentElement.style.display = 'none';
-      }, 500);
-    }
-  } catch (e) {
-    console.warn('Live2D failed, using static fallback:', e);
-  }
-}
 
 // =========================================
 //  Modals
@@ -1417,7 +1111,6 @@ function showColony(c) {
   document.getElementById('cd-bleach').textContent = '健康'; // 展示用：一律顯示健康，不顯示 bleaching_proxy 數值
   document.getElementById('cd-swatch').style.background = rgbToCss(c.mean_rgb || [0.5,0.5,0.5]);
   document.getElementById('cd-genus-dot').style.background = genusColor(c.class_name);
-  if (charVisible) showCharacter(c.class_name);
 }
 
 function clearColony() {
@@ -1425,7 +1118,6 @@ function clearColony() {
   setBboxHighlight(null);
   document.getElementById('colony-empty').classList.remove('hidden');
   document.getElementById('colony-detail').classList.add('hidden');
-  if (charVisible) showCharacter('coral-chan');
 }
 
 // =========================================
@@ -2243,10 +1935,6 @@ async function main() {
   document.querySelectorAll('.seg-btn[data-range]').forEach(b => b.addEventListener('click', () => setRange(b.dataset.range)));
 
   setInterval(tick, 30000);
-
-  // Character guide (static fallback + Live2D)
-  initCharacterSystem();
-  initLive2D();
 
   // 3D
   init3D();
